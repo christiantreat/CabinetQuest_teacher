@@ -887,9 +887,141 @@
     </div>
 
     <!-- Three.js Library -->
-    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-    <!-- OrbitControls -->
-    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+
+    <!-- OrbitControls - Inline implementation -->
+    <script>
+        // Simplified OrbitControls implementation
+        (function() {
+            if (typeof THREE === 'undefined') {
+                console.error('THREE.js must be loaded first');
+                return;
+            }
+
+            THREE.OrbitControls = function(camera, domElement) {
+                this.camera = camera;
+                this.domElement = domElement;
+                this.enabled = true;
+                this.target = new THREE.Vector3();
+
+                this.minDistance = 0;
+                this.maxDistance = Infinity;
+                this.minPolarAngle = 0;
+                this.maxPolarAngle = Math.PI;
+
+                this.enableDamping = false;
+                this.dampingFactor = 0.05;
+
+                var scope = this;
+                var STATE = { NONE: -1, ROTATE: 0, DOLLY: 1, PAN: 2 };
+                var state = STATE.NONE;
+
+                var spherical = new THREE.Spherical();
+                var sphericalDelta = new THREE.Spherical();
+                var scale = 1;
+                var panOffset = new THREE.Vector3();
+
+                var rotateStart = new THREE.Vector2();
+                var rotateEnd = new THREE.Vector2();
+                var panStart = new THREE.Vector2();
+                var panEnd = new THREE.Vector2();
+
+                this.update = function() {
+                    var offset = new THREE.Vector3();
+                    var quat = new THREE.Quaternion().setFromUnitVectors(camera.up, new THREE.Vector3(0, 1, 0));
+                    var quatInverse = quat.clone().invert();
+
+                    var position = scope.camera.position;
+                    offset.copy(position).sub(scope.target);
+                    offset.applyQuaternion(quat);
+                    spherical.setFromVector3(offset);
+
+                    spherical.theta += sphericalDelta.theta;
+                    spherical.phi += sphericalDelta.phi;
+                    spherical.phi = Math.max(scope.minPolarAngle, Math.min(scope.maxPolarAngle, spherical.phi));
+                    spherical.makeSafe();
+                    spherical.radius *= scale;
+                    spherical.radius = Math.max(scope.minDistance, Math.min(scope.maxDistance, spherical.radius));
+
+                    scope.target.add(panOffset);
+                    offset.setFromSpherical(spherical);
+                    offset.applyQuaternion(quatInverse);
+                    position.copy(scope.target).add(offset);
+                    scope.camera.lookAt(scope.target);
+
+                    if (scope.enableDamping) {
+                        sphericalDelta.theta *= (1 - scope.dampingFactor);
+                        sphericalDelta.phi *= (1 - scope.dampingFactor);
+                        panOffset.multiplyScalar(1 - scope.dampingFactor);
+                    } else {
+                        sphericalDelta.set(0, 0, 0);
+                        panOffset.set(0, 0, 0);
+                    }
+                    scale = 1;
+                };
+
+                function onMouseDown(event) {
+                    if (!scope.enabled) return;
+                    event.preventDefault();
+                    if (event.button === 0) {
+                        state = STATE.ROTATE;
+                        rotateStart.set(event.clientX, event.clientY);
+                    } else if (event.button === 2) {
+                        state = STATE.PAN;
+                        panStart.set(event.clientX, event.clientY);
+                    }
+                    document.addEventListener('mousemove', onMouseMove);
+                    document.addEventListener('mouseup', onMouseUp);
+                }
+
+                function onMouseMove(event) {
+                    if (!scope.enabled) return;
+                    event.preventDefault();
+                    if (state === STATE.ROTATE) {
+                        rotateEnd.set(event.clientX, event.clientY);
+                        var rotateDelta = new THREE.Vector2().subVectors(rotateEnd, rotateStart).multiplyScalar(0.01);
+                        sphericalDelta.theta -= 2 * Math.PI * rotateDelta.x / scope.domElement.clientHeight;
+                        sphericalDelta.phi -= 2 * Math.PI * rotateDelta.y / scope.domElement.clientHeight;
+                        rotateStart.copy(rotateEnd);
+                    } else if (state === STATE.PAN) {
+                        panEnd.set(event.clientX, event.clientY);
+                        var panDelta = new THREE.Vector2().subVectors(panEnd, panStart).multiplyScalar(0.01);
+                        var offset = new THREE.Vector3().copy(scope.camera.position).sub(scope.target);
+                        var targetDistance = offset.length() * Math.tan((scope.camera.fov / 2) * Math.PI / 180.0);
+                        panOffset.x -= 2 * panDelta.x * targetDistance / scope.domElement.clientHeight;
+                        panOffset.y += 2 * panDelta.y * targetDistance / scope.domElement.clientHeight;
+                        panStart.copy(panEnd);
+                    }
+                    scope.update();
+                }
+
+                function onMouseUp() {
+                    if (!scope.enabled) return;
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.removeEventListener('mouseup', onMouseUp);
+                    state = STATE.NONE;
+                }
+
+                function onMouseWheel(event) {
+                    if (!scope.enabled) return;
+                    event.preventDefault();
+                    if (event.deltaY < 0) {
+                        scale /= 0.95;
+                    } else if (event.deltaY > 0) {
+                        scale *= 0.95;
+                    }
+                    scope.update();
+                }
+
+                this.domElement.addEventListener('mousedown', onMouseDown);
+                this.domElement.addEventListener('wheel', onMouseWheel);
+                this.domElement.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+                this.update();
+            };
+
+            console.log('✓ OrbitControls polyfill loaded');
+        })();
+    </script>
 
     <script src="teacher.js"></script>
 </body>
