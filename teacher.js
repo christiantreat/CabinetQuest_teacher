@@ -609,10 +609,16 @@ function selectCart3D(cartId) {
         body.material.emissiveIntensity = 0.3;
     }
 
+    // Add visual helpers (bounding box and facing arrow)
+    createSelectionHelpers(cartGroup);
+
     console.log('Selected cart:', cartId);
 }
 
 function deselectCart3D() {
+    // Remove visual helpers
+    removeSelectionHelpers();
+
     cartMeshes.forEach((cartGroup) => {
         const body = cartGroup.userData.clickable;
         if (body && body.material.emissive) {
@@ -623,6 +629,62 @@ function deselectCart3D() {
 }
 
 let selectedDrawer3D = null;
+let selectionHelpers = {
+    boundingBox: null,
+    facingArrow: null
+};
+
+function createSelectionHelpers(cartGroup) {
+    // Remove old helpers
+    removeSelectionHelpers();
+
+    // Get cart bounds
+    const box = new THREE.Box3().setFromObject(cartGroup);
+    const size = new THREE.Vector3();
+    box.getSize(size);
+    const center = new THREE.Vector3();
+    box.getCenter(center);
+
+    // Bounding box
+    const boxGeometry = new THREE.BoxGeometry(size.x + 0.2, size.y + 0.2, size.z + 0.2);
+    const boxEdges = new THREE.EdgesGeometry(boxGeometry);
+    const boxLine = new THREE.LineSegments(
+        boxEdges,
+        new THREE.LineBasicMaterial({ color: 0x0e639c, linewidth: 2 })
+    );
+    boxLine.position.copy(center);
+    scene.add(boxLine);
+    selectionHelpers.boundingBox = boxLine;
+
+    // Facing arrow (points in direction cart faces)
+    const arrowLength = Math.max(size.x, size.z) * 0.8;
+    const arrowDir = new THREE.Vector3(0, 0, 1); // Forward direction
+    arrowDir.applyQuaternion(cartGroup.quaternion); // Apply cart rotation
+    const arrowOrigin = cartGroup.position.clone();
+    arrowOrigin.y = 0.1; // Just above floor
+
+    const arrow = new THREE.ArrowHelper(
+        arrowDir,
+        arrowOrigin,
+        arrowLength,
+        0x0e639c,
+        arrowLength * 0.3,
+        arrowLength * 0.2
+    );
+    scene.add(arrow);
+    selectionHelpers.facingArrow = arrow;
+}
+
+function removeSelectionHelpers() {
+    if (selectionHelpers.boundingBox) {
+        scene.remove(selectionHelpers.boundingBox);
+        selectionHelpers.boundingBox = null;
+    }
+    if (selectionHelpers.facingArrow) {
+        scene.remove(selectionHelpers.facingArrow);
+        selectionHelpers.facingArrow = null;
+    }
+}
 
 function selectDrawer3D(drawerId) {
     // Remove previous selection
@@ -1018,6 +1080,71 @@ function updateRoomSize() {
 function updateSnapToGrid() {
     STATE.snapToGrid = document.getElementById('snap-to-grid').checked;
     showAlert(`Snap to grid ${STATE.snapToGrid ? 'enabled' : 'disabled'}`, 'success');
+}
+
+// ===== CAMERA VIEW TOGGLE =====
+let cameraViewMode = 'orbital'; // 'orbital' or 'topDown'
+let savedCameraPosition = null;
+let savedCameraRotation = null;
+
+function toggleCameraView() {
+    if (cameraViewMode === 'orbital') {
+        // Switch to top-down view
+        // Save current camera state
+        savedCameraPosition = camera.position.clone();
+        savedCameraRotation = camera.rotation.clone();
+
+        // Animate to top-down position
+        const targetPosition = new THREE.Vector3(0, 30, 0); // Directly above center
+        const targetLookAt = new THREE.Vector3(0, 0, 0);
+
+        animateCameraTo(targetPosition, targetLookAt, () => {
+            cameraViewMode = 'topDown';
+            controls.enabled = false; // Disable orbit controls in top-down
+            document.getElementById('toggle-camera-view').textContent = '📷 3D View';
+            showAlert('Top-down view activated', 'success');
+        });
+    } else {
+        // Switch back to orbital view
+        controls.enabled = true;
+
+        if (savedCameraPosition) {
+            const targetLookAt = new THREE.Vector3(0, 0, 0);
+            animateCameraTo(savedCameraPosition, targetLookAt, () => {
+                camera.rotation.copy(savedCameraRotation);
+                cameraViewMode = 'orbital';
+                document.getElementById('toggle-camera-view').textContent = '📷 Top View';
+                showAlert('3D orbital view activated', 'success');
+            });
+        }
+    }
+}
+
+function animateCameraTo(targetPosition, targetLookAt, onComplete) {
+    const startPosition = camera.position.clone();
+    const duration = 800; // ms
+    const startTime = Date.now();
+
+    function animate() {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = easeInOutCubic(progress);
+
+        camera.position.lerpVectors(startPosition, targetPosition, eased);
+        camera.lookAt(targetLookAt);
+
+        if (progress < 1) {
+            requestAnimationFrame(animate);
+        } else {
+            if (onComplete) onComplete();
+        }
+    }
+
+    animate();
+}
+
+function easeInOutCubic(t) {
+    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
 // ===== HIERARCHY TREE =====
