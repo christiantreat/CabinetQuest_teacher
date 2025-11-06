@@ -161,7 +161,22 @@ function createLighting() {
 }
 
 function createOrbitControls() {
-    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    // Try different ways OrbitControls might be loaded
+    const OrbitControlsConstructor = THREE.OrbitControls || window.OrbitControls;
+
+    if (!OrbitControlsConstructor) {
+        console.error('OrbitControls not found! Trying to continue without it...');
+        console.log('THREE object:', THREE);
+        // Create a dummy controls object to prevent crashes
+        controls = {
+            enabled: true,
+            update: function() {},
+            target: { set: function() {} }
+        };
+        return;
+    }
+
+    controls = new OrbitControlsConstructor(camera, renderer.domElement);
 
     // Configure controls
     controls.target.set(0, 0, 0); // Look at room center
@@ -180,7 +195,7 @@ function createOrbitControls() {
 function animateThreeScene() {
     requestAnimationFrame(animateThreeScene);
 
-    if (controls) {
+    if (controls && controls.update) {
         controls.update(); // Required for damping
     }
 
@@ -536,7 +551,9 @@ function onThreeMouseDown(event) {
             selectEntity('cart', cartId);
 
             // Disable orbit controls during drag
-            controls.enabled = false;
+            if (controls && controls.enabled !== undefined) {
+                controls.enabled = false;
+            }
         }
     } else {
         // Clicked empty space
@@ -590,7 +607,10 @@ function onThreeMouseMove(event) {
 function onThreeMouseUp(event) {
     if (selectedCart3D) {
         selectedCart3D = null;
-        controls.enabled = true; // Re-enable orbit controls
+        // Re-enable orbit controls
+        if (controls && controls.enabled !== undefined) {
+            controls.enabled = true;
+        }
     }
 }
 
@@ -1088,6 +1108,11 @@ let savedCameraPosition = null;
 let savedCameraRotation = null;
 
 function toggleCameraView() {
+    if (!controls) {
+        showAlert('Camera controls not available', 'error');
+        return;
+    }
+
     if (cameraViewMode === 'orbital') {
         // Switch to top-down view
         // Save current camera state
@@ -1100,13 +1125,17 @@ function toggleCameraView() {
 
         animateCameraTo(targetPosition, targetLookAt, () => {
             cameraViewMode = 'topDown';
-            controls.enabled = false; // Disable orbit controls in top-down
+            if (controls.enabled !== undefined) {
+                controls.enabled = false; // Disable orbit controls in top-down
+            }
             document.getElementById('toggle-camera-view').textContent = '📷 3D View';
             showAlert('Top-down view activated', 'success');
         });
     } else {
         // Switch back to orbital view
-        controls.enabled = true;
+        if (controls.enabled !== undefined) {
+            controls.enabled = true;
+        }
 
         if (savedCameraPosition) {
             const targetLookAt = new THREE.Vector3(0, 0, 0);
