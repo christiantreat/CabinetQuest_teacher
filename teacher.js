@@ -188,6 +188,79 @@ function animateThreeScene() {
 }
 
 // ===== 3D CART CREATION =====
+
+// Helper function to determine drawer color based on items
+function getDrawerColor(drawer) {
+    // Check if drawer has any items
+    const drawerItems = CONFIG.items.filter(item => item.drawer === drawer.id);
+
+    if (drawerItems.length === 0) {
+        return 0x999999; // Gray for empty drawers
+    }
+
+    // Color mapping (you can customize this based on item categories)
+    const colorMap = {
+        'airway': 0x4CAF50,    // Green
+        'med': 0x2196F3,       // Blue
+        'code': 0xF44336,      // Red
+        'trauma': 0xFF9800     // Orange
+    };
+
+    // Use the cart color as base
+    return colorMap[drawer.cart] || 0x999999;
+}
+
+function createDrawer(drawer, cartWidth, drawerHeight, cartDepth, index, startY) {
+    const drawerGroup = new THREE.Group();
+    drawerGroup.userData = { drawerId: drawer.id, drawerData: drawer, isOpen: false };
+
+    // Drawer dimensions (slightly smaller than cart to fit inside)
+    const drawerWidth = cartWidth * 0.9;
+    const drawerDepth = cartDepth * 0.85;
+
+    // Drawer front face (the visible part)
+    const frontGeometry = new THREE.BoxGeometry(drawerWidth, drawerHeight, 0.08);
+    const drawerColor = getDrawerColor(drawer);
+    const frontMaterial = new THREE.MeshStandardMaterial({
+        color: drawerColor,
+        roughness: 0.6,
+        metalness: 0.4
+    });
+    const front = new THREE.Mesh(frontGeometry, frontMaterial);
+
+    // Position drawer
+    const drawerGap = 0.05;
+    const yPosition = startY + index * (drawerHeight + drawerGap) + drawerHeight / 2;
+    front.position.y = yPosition;
+    front.position.z = (cartDepth / 2) - 0.05; // Just inside the cart front
+
+    front.castShadow = true;
+    front.receiveShadow = true;
+    drawerGroup.add(front);
+
+    // Drawer handle (small horizontal cylinder)
+    const handleGeometry = new THREE.CylinderGeometry(0.03, 0.03, drawerWidth * 0.3, 8);
+    const handleMaterial = new THREE.MeshStandardMaterial({
+        color: 0x444444,
+        roughness: 0.2,
+        metalness: 0.8
+    });
+    const handle = new THREE.Mesh(handleGeometry, handleMaterial);
+    handle.rotation.z = Math.PI / 2; // Horizontal
+    handle.position.copy(front.position);
+    handle.position.z = front.position.z + 0.05; // In front of drawer face
+    drawerGroup.add(handle);
+
+    // Add label (drawer name as text sprite - simplified for now)
+    // We'll skip text sprites for now as they're complex; the color coding helps identify drawers
+
+    // Make clickable
+    front.userData = { drawerId: drawer.id, type: 'drawer' };
+    drawerGroup.userData.clickable = front;
+
+    return drawerGroup;
+}
+
 function create3DCart(cartData) {
     // Create a group to hold all cart parts
     const cartGroup = new THREE.Group();
@@ -218,17 +291,22 @@ function create3DCart(cartData) {
     wireframe.position.copy(body.position);
     cartGroup.add(wireframe);
 
-    // Handle (simple horizontal bar in front)
-    const handleGeometry = new THREE.CylinderGeometry(0.05, 0.05, width * 0.8, 8);
-    const handleMaterial = new THREE.MeshStandardMaterial({
-        color: 0x888888,
-        roughness: 0.3,
-        metalness: 0.7
-    });
-    const handle = new THREE.Mesh(handleGeometry, handleMaterial);
-    handle.rotation.z = Math.PI / 2; // Rotate horizontal
-    handle.position.set(0, height / 2, depth / 2 + 0.1); // Front center
-    cartGroup.add(handle);
+    // Add drawers (get from CONFIG)
+    const cartDrawers = CONFIG.drawers.filter(d => d.cart === cartData.id);
+    if (cartDrawers.length > 0) {
+        // Sort drawers by number (top to bottom)
+        cartDrawers.sort((a, b) => a.number - b.number);
+
+        const drawerHeight = 0.5; // 6 inches in feet
+        const drawerGap = 0.05; // Small gap between drawers
+        const totalDrawerHeight = cartDrawers.length * (drawerHeight + drawerGap);
+        const startY = (height / 2) - (totalDrawerHeight / 2); // Start from top
+
+        cartDrawers.forEach((drawer, index) => {
+            const drawerGroup = createDrawer(drawer, width, drawerHeight, depth, index, startY);
+            cartGroup.add(drawerGroup);
+        });
+    }
 
     // Position cart based on data
     // Convert normalized 0-1 coords to feet-based 3D coords
@@ -303,30 +381,53 @@ function onThreeMouseDown(event) {
     // Raycast to find intersections
     raycaster.setFromCamera(mouse, camera);
 
-    // Get all clickable cart meshes
+    // Get all clickable meshes (carts and drawers)
     const clickableMeshes = [];
     cartMeshes.forEach((cartGroup) => {
+        // Add cart body
         if (cartGroup.userData.clickable) {
             clickableMeshes.push(cartGroup.userData.clickable);
         }
+
+        // Add drawers
+        cartGroup.children.forEach((child) => {
+            if (child.userData && child.userData.drawerId && child.userData.clickable) {
+                clickableMeshes.push(child.userData.clickable);
+            }
+        });
     });
 
     const intersects = raycaster.intersectObjects(clickableMeshes, false);
 
     if (intersects.length > 0) {
-        // Cart was clicked
-        const cartId = intersects[0].object.userData.cartId;
-        selectCart3D(cartId);
-        selectedCart3D = cartMeshes.get(cartId);
+        const clickedObject = intersects[0].object;
 
-        // Also select in 2D system
-        selectEntity('cart', cartId);
+        // Check if drawer or cart was clicked
+        if (clickedObject.userData.type === 'drawer') {
+            // Drawer was clicked
+            const drawerId = clickedObject.userData.drawerId;
+            selectDrawer3D(drawerId);
 
-        // Disable orbit controls during drag
-        controls.enabled = false;
+            // Select in 2D system
+            selectEntity('drawer', drawerId);
+
+            // Don't allow dragging drawers, but allow clicking
+        } else if (clickedObject.userData.cartId) {
+            // Cart was clicked
+            const cartId = clickedObject.userData.cartId;
+            selectCart3D(cartId);
+            selectedCart3D = cartMeshes.get(cartId);
+
+            // Also select in 2D system
+            selectEntity('cart', cartId);
+
+            // Disable orbit controls during drag
+            controls.enabled = false;
+        }
     } else {
         // Clicked empty space
         deselectCart3D();
+        deselectDrawer3D();
         deselectEntity();
     }
 }
@@ -405,6 +506,102 @@ function deselectCart3D() {
             body.material.emissiveIntensity = 0;
         }
     });
+}
+
+let selectedDrawer3D = null;
+
+function selectDrawer3D(drawerId) {
+    // Remove previous selection
+    deselectDrawer3D();
+    deselectCart3D();
+
+    // Find the drawer
+    let drawerGroup = null;
+    cartMeshes.forEach((cartGroup) => {
+        cartGroup.children.forEach((child) => {
+            if (child.userData && child.userData.drawerId === drawerId) {
+                drawerGroup = child;
+            }
+        });
+    });
+
+    if (!drawerGroup) return;
+
+    selectedDrawer3D = drawerGroup;
+
+    // Add selection highlight
+    const drawerFront = drawerGroup.userData.clickable;
+    if (drawerFront) {
+        drawerFront.material = drawerFront.material.clone();
+        drawerFront.material.emissive = new THREE.Color(0x0e639c);
+        drawerFront.material.emissiveIntensity = 0.4;
+    }
+
+    // Open the drawer (animate)
+    openDrawer(drawerGroup);
+
+    console.log('Selected drawer:', drawerId);
+}
+
+function deselectDrawer3D() {
+    if (selectedDrawer3D) {
+        // Close the drawer
+        closeDrawer(selectedDrawer3D);
+
+        // Remove selection highlight
+        const drawerFront = selectedDrawer3D.userData.clickable;
+        if (drawerFront && drawerFront.material.emissive) {
+            drawerFront.material.emissive = new THREE.Color(0x000000);
+            drawerFront.material.emissiveIntensity = 0;
+        }
+
+        selectedDrawer3D = null;
+    }
+}
+
+// Drawer animation functions
+function openDrawer(drawerGroup) {
+    if (drawerGroup.userData.isOpen) return;
+
+    drawerGroup.userData.isOpen = true;
+    drawerGroup.userData.targetZ = drawerGroup.position.z + 0.5; // Pull out 6 inches
+
+    // Animate using lerp in animation loop
+    animateDrawer(drawerGroup);
+}
+
+function closeDrawer(drawerGroup) {
+    if (!drawerGroup.userData.isOpen) return;
+
+    drawerGroup.userData.isOpen = false;
+    drawerGroup.userData.targetZ = 0; // Push back to original position
+
+    animateDrawer(drawerGroup);
+}
+
+function animateDrawer(drawerGroup) {
+    const animate = () => {
+        if (!drawerGroup.userData.targetZ && drawerGroup.userData.targetZ !== 0) return;
+
+        const current = drawerGroup.position.z;
+        const target = drawerGroup.userData.targetZ;
+        const diff = target - current;
+
+        if (Math.abs(diff) < 0.01) {
+            // Done animating
+            drawerGroup.position.z = target;
+            drawerGroup.userData.targetZ = null;
+            return;
+        }
+
+        // Lerp toward target
+        drawerGroup.position.z += diff * 0.15;
+
+        // Continue animating
+        requestAnimationFrame(animate);
+    };
+
+    animate();
 }
 
 // ===== INITIALIZATION =====
