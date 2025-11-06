@@ -189,6 +189,74 @@ function animateThreeScene() {
 
 // ===== 3D CART CREATION =====
 
+// Cart type definitions with specific dimensions and characteristics
+const CART_TYPES = {
+    crash: {
+        name: 'Crash Cart (Code Cart)',
+        width: 2.42,   // 29 inches
+        height: 3.5,   // 42 inches
+        depth: 2.04,   // 24.5 inches
+        color: '#F44336',
+        drawers: 5,
+        drawerHeight: 0.5
+    },
+    airway: {
+        name: 'Airway Cart',
+        width: 2.42,
+        height: 3.5,
+        depth: 2.04,
+        color: '#4CAF50',
+        drawers: 4,
+        drawerHeight: 0.5
+    },
+    medication: {
+        name: 'Medication Cart',
+        width: 2.42,
+        height: 3.0,   // 36 inches (shorter)
+        depth: 2.04,
+        color: '#FF9800',
+        drawers: 3,
+        drawerHeight: 0.5
+    },
+    iv: {
+        name: 'IV Cart',
+        width: 1.5,    // 18 inches (narrow base)
+        height: 5.0,   // 60 inches (tall pole)
+        depth: 1.5,
+        color: '#9C27B0',
+        drawers: 1,    // Small base drawer
+        drawerHeight: 0.5,
+        hasIVPole: true
+    },
+    procedure: {
+        name: 'Procedure Table',
+        width: 4.0,    // 48 inches (wide surface)
+        height: 3.0,   // 36 inches
+        depth: 2.5,    // 30 inches
+        color: '#757575',
+        drawers: 0,    // Flat surface, no drawers
+        hasTopSurface: true
+    },
+    trauma: {
+        name: 'Trauma Cart',
+        width: 2.42,
+        height: 3.5,
+        depth: 2.04,
+        color: '#E91E63',
+        drawers: 4,
+        drawerHeight: 0.5
+    },
+    supply: {
+        name: 'Supply Cart',
+        width: 2.0,
+        height: 3.0,
+        depth: 1.75,
+        color: '#2196F3',
+        drawers: 3,
+        drawerHeight: 0.5
+    }
+};
+
 // Helper function to determine drawer color based on items
 function getDrawerColor(drawer) {
     // Check if drawer has any items
@@ -266,10 +334,11 @@ function create3DCart(cartData) {
     const cartGroup = new THREE.Group();
     cartGroup.userData = { cartId: cartData.id, cartData: cartData };
 
-    // Standard dimensions (in feet)
-    const width = 2.42;  // 29 inches
-    const height = 3.5;  // 42 inches
-    const depth = 2.04;  // 24.5 inches
+    // Get cart type definition or use defaults
+    const cartType = cartData.type ? CART_TYPES[cartData.type] : null;
+    const width = cartType ? cartType.width : (cartData.width3D || 2.42);
+    const height = cartType ? cartType.height : (cartData.height3D || 3.5);
+    const depth = cartType ? cartType.depth : (cartData.depth3D || 2.04);
 
     // Cart body (main box)
     const bodyGeometry = new THREE.BoxGeometry(width, height, depth);
@@ -290,6 +359,51 @@ function create3DCart(cartData) {
     const wireframe = new THREE.LineSegments(edges, lineMaterial);
     wireframe.position.copy(body.position);
     cartGroup.add(wireframe);
+
+    // Add special features based on cart type
+    if (cartType && cartType.hasIVPole) {
+        // IV pole (tall cylinder at back)
+        const poleGeometry = new THREE.CylinderGeometry(0.04, 0.04, height * 0.7, 12);
+        const poleMaterial = new THREE.MeshStandardMaterial({
+            color: 0xcccccc,
+            roughness: 0.3,
+            metalness: 0.7
+        });
+        const pole = new THREE.Mesh(poleGeometry, poleMaterial);
+        pole.position.y = height - (height * 0.35);
+        pole.position.z = -depth / 3;
+        cartGroup.add(pole);
+
+        // IV hooks at top
+        const hookGeometry = new THREE.TorusGeometry(0.15, 0.02, 8, 16);
+        const hookMaterial = new THREE.MeshStandardMaterial({
+            color: 0xaaaaaa,
+            roughness: 0.2,
+            metalness: 0.8
+        });
+        for (let i = 0; i < 4; i++) {
+            const hook = new THREE.Mesh(hookGeometry, hookMaterial);
+            hook.position.y = height - 0.3;
+            hook.position.x = (i - 1.5) * 0.15;
+            hook.position.z = -depth / 3;
+            hook.rotation.x = Math.PI / 2;
+            cartGroup.add(hook);
+        }
+    }
+
+    if (cartType && cartType.hasTopSurface) {
+        // Procedure table - add thicker top surface
+        const topGeometry = new THREE.BoxGeometry(width, 0.1, depth);
+        const topMaterial = new THREE.MeshStandardMaterial({
+            color: 0xf0f0f0,
+            roughness: 0.4,
+            metalness: 0.5
+        });
+        const topSurface = new THREE.Mesh(topGeometry, topMaterial);
+        topSurface.position.y = height / 2 + 0.05;
+        topSurface.castShadow = true;
+        cartGroup.add(topSurface);
+    }
 
     // Add drawers (get from CONFIG)
     const cartDrawers = CONFIG.drawers.filter(d => d.cart === cartData.id);
@@ -1115,6 +1229,20 @@ function buildCartInspector(cart, container) {
             </div>
 
             <div class="form-field">
+                <label>Cart Type</label>
+                <select onchange="updateCartProperty('type', this.value)">
+                    <option value="">Default/Custom</option>
+                    <option value="crash" ${cart.type === 'crash' ? 'selected' : ''}>Crash Cart (Code Cart)</option>
+                    <option value="airway" ${cart.type === 'airway' ? 'selected' : ''}>Airway Cart</option>
+                    <option value="medication" ${cart.type === 'medication' ? 'selected' : ''}>Medication Cart</option>
+                    <option value="iv" ${cart.type === 'iv' ? 'selected' : ''}>IV Cart</option>
+                    <option value="procedure" ${cart.type === 'procedure' ? 'selected' : ''}>Procedure Table</option>
+                    <option value="trauma" ${cart.type === 'trauma' ? 'selected' : ''}>Trauma Cart</option>
+                    <option value="supply" ${cart.type === 'supply' ? 'selected' : ''}>Supply Cart</option>
+                </select>
+            </div>
+
+            <div class="form-field">
                 <label>Color</label>
                 <div class="color-picker-field">
                     <input type="color" value="${cart.color}" onchange="updateCartProperty('color', this.value)">
@@ -1427,9 +1555,15 @@ function updateCartProperty(prop, value) {
         buildHierarchy();
         drawCanvas();
 
-        // If color changed, rebuild 3D cart
-        if (prop === 'color' || prop === 'name') {
+        // If type, color, or name changed, rebuild 3D cart
+        if (prop === 'type' || prop === 'color' || prop === 'name') {
+            // If type changed, update color to match type default
+            if (prop === 'type' && value && CART_TYPES[value]) {
+                cart.color = CART_TYPES[value].color;
+                cart.name = CART_TYPES[value].name;
+            }
             buildAll3DCarts();
+            updateInspector(); // Refresh inspector to show updated values
         }
 
         // If position changed from inspector, update 3D position
@@ -1710,11 +1844,11 @@ function loadConfiguration() {
 
 function loadDefaultConfiguration() {
     CONFIG.carts = [
-        { id: 'airway', name: 'Airway Cart', x: 0.2, y: 0.3, width: 80, height: 80, rotation: 0, color: '#4CAF50' },
-        { id: 'med', name: 'Medication Cart', x: 0.8, y: 0.3, width: 80, height: 80, rotation: 90, color: '#2196F3' },
-        { id: 'code', name: 'Code Cart', x: 0.2, y: 0.7, width: 80, height: 80, rotation: 180, color: '#F44336' },
-        { id: 'trauma', name: 'Trauma Cart', x: 0.8, y: 0.7, width: 80, height: 80, rotation: 270, color: '#FF9800' },
-        { id: 'inventory', name: 'Procedure Table', x: 0.5, y: 0.5, width: 80, height: 80, rotation: 0, color: '#9C27B0', isInventory: true }
+        { id: 'airway', name: 'Airway Cart', type: 'airway', x: 0.2, y: 0.3, width: 80, height: 80, rotation: 0, color: '#4CAF50' },
+        { id: 'med', name: 'Medication Cart', type: 'medication', x: 0.8, y: 0.3, width: 80, height: 80, rotation: 90, color: '#FF9800' },
+        { id: 'code', name: 'Crash Cart (Code Cart)', type: 'crash', x: 0.2, y: 0.7, width: 80, height: 80, rotation: 180, color: '#F44336' },
+        { id: 'trauma', name: 'Trauma Cart', type: 'trauma', x: 0.8, y: 0.7, width: 80, height: 80, rotation: 270, color: '#E91E63' },
+        { id: 'inventory', name: 'Procedure Table', type: 'procedure', x: 0.5, y: 0.5, width: 80, height: 80, rotation: 0, color: '#757575', isInventory: true }
     ];
 
     CONFIG.drawers = [
