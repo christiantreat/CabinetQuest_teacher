@@ -45,6 +45,144 @@ let STATE = {
 const canvas = document.getElementById('room-canvas');
 const ctx = canvas.getContext('2d');
 
+// ===== THREE.JS 3D SCENE SETUP =====
+let scene, camera, renderer, controls;
+let floor, floorGrid;
+const threeContainer = document.getElementById('three-container');
+
+function initThreeJS() {
+    // Create scene
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xfafafa); // Match room background
+
+    // Create camera (perspective for 3D)
+    const aspect = threeContainer.clientWidth / threeContainer.clientHeight;
+    camera = new THREE.PerspectiveCamera(75, aspect, 0.1, 1000);
+
+    // Position camera for orbital view
+    camera.position.set(15, 15, 15); // Above and angled
+    camera.lookAt(0, 0, 0); // Look at room center
+
+    // Create renderer
+    renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: true // Transparent background initially
+    });
+    renderer.setSize(threeContainer.clientWidth, threeContainer.clientHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    threeContainer.appendChild(renderer.domElement);
+
+    // Enable pointer events on the 3D container
+    threeContainer.style.pointerEvents = 'auto';
+
+    // Handle window resize
+    window.addEventListener('resize', onThreeResize);
+
+    console.log('✓ Three.js scene initialized');
+}
+
+function onThreeResize() {
+    const width = threeContainer.clientWidth;
+    const height = threeContainer.clientHeight;
+
+    camera.aspect = width / height;
+    camera.updateProjectionMatrix();
+    renderer.setSize(width, height);
+}
+
+function animateThree() {
+    requestAnimationFrame(animateThree);
+    renderer.render(scene, camera);
+}
+
+// ===== THREE.JS SCENE OBJECTS =====
+function createFloor() {
+    // Get room dimensions from config (will convert to feet later)
+    const roomWidth = 30; // feet
+    const roomDepth = 25; // feet
+
+    // Create floor geometry (large plane)
+    const floorGeometry = new THREE.PlaneGeometry(roomWidth, roomDepth);
+    const floorMaterial = new THREE.MeshStandardMaterial({
+        color: 0xf5f5f0, // Beige/hospital floor color
+        roughness: 0.8,
+        metalness: 0.2
+    });
+
+    floor = new THREE.Mesh(floorGeometry, floorMaterial);
+    floor.rotation.x = -Math.PI / 2; // Rotate to be horizontal
+    floor.position.y = 0; // At ground level
+    floor.receiveShadow = true;
+    scene.add(floor);
+
+    console.log('✓ Floor created:', roomWidth, 'ft x', roomDepth, 'ft');
+}
+
+function createGrid() {
+    const roomWidth = 30; // feet
+    const roomDepth = 25; // feet
+    const gridSize = 1; // 1 foot grid
+
+    floorGrid = new THREE.GridHelper(
+        Math.max(roomWidth, roomDepth), // size
+        Math.max(roomWidth, roomDepth) / gridSize, // divisions
+        0x666666, // center line color
+        0x888888  // grid color
+    );
+    floorGrid.position.y = 0.01; // Slightly above floor to prevent z-fighting
+    scene.add(floorGrid);
+
+    console.log('✓ Grid created');
+}
+
+function createLighting() {
+    // Ambient light (fills everything with soft light)
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+
+    // Point lights (ceiling lights)
+    const pointLight1 = new THREE.PointLight(0xffffff, 0.5, 50);
+    pointLight1.position.set(10, 10, 10);
+    scene.add(pointLight1);
+
+    const pointLight2 = new THREE.PointLight(0xffffff, 0.5, 50);
+    pointLight2.position.set(-10, 10, 10);
+    scene.add(pointLight2);
+
+    const pointLight3 = new THREE.PointLight(0xffffff, 0.5, 50);
+    pointLight3.position.set(0, 10, -10);
+    scene.add(pointLight3);
+
+    console.log('✓ Lighting added');
+}
+
+function createOrbitControls() {
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+    // Configure controls
+    controls.target.set(0, 0, 0); // Look at room center
+    controls.enableDamping = true; // Smooth camera movement
+    controls.dampingFactor = 0.05;
+    controls.minDistance = 5; // Minimum zoom
+    controls.maxDistance = 50; // Maximum zoom
+    controls.maxPolarAngle = Math.PI / 2 - 0.1; // Don't allow going below ground
+
+    controls.update();
+
+    console.log('✓ Orbit controls enabled');
+}
+
+// Update animation loop to include controls
+function animateThreeScene() {
+    requestAnimationFrame(animateThreeScene);
+
+    if (controls) {
+        controls.update(); // Required for damping
+    }
+
+    renderer.render(scene, camera);
+}
+
 // ===== INITIALIZATION =====
 function init() {
     loadConfiguration();
@@ -63,6 +201,16 @@ function init() {
     canvas.height = CONFIG.roomSettings.height;
 
     drawCanvas();
+
+    // Initialize Three.js 3D scene
+    console.log('🚀 Initializing 3D scene...');
+    initThreeJS();
+    createFloor();
+    createGrid();
+    createLighting();
+    createOrbitControls();
+    animateThreeScene();
+    console.log('✅ 3D scene ready!');
 
     // Setup autosave
     setInterval(() => {
