@@ -48,6 +48,10 @@ const ctx = canvas.getContext('2d');
 // ===== THREE.JS 3D SCENE SETUP =====
 let scene, camera, renderer, controls;
 let floor, floorGrid;
+let cartMeshes = new Map(); // Map cart ID to Three.js mesh/group
+let raycaster, mouse;
+let selectedCart3D = null;
+let dragPlane;
 const threeContainer = document.getElementById('three-container');
 
 function initThreeJS() {
@@ -183,6 +187,226 @@ function animateThreeScene() {
     renderer.render(scene, camera);
 }
 
+// ===== 3D CART CREATION =====
+function create3DCart(cartData) {
+    // Create a group to hold all cart parts
+    const cartGroup = new THREE.Group();
+    cartGroup.userData = { cartId: cartData.id, cartData: cartData };
+
+    // Standard dimensions (in feet)
+    const width = 2.42;  // 29 inches
+    const height = 3.5;  // 42 inches
+    const depth = 2.04;  // 24.5 inches
+
+    // Cart body (main box)
+    const bodyGeometry = new THREE.BoxGeometry(width, height, depth);
+    const bodyMaterial = new THREE.MeshStandardMaterial({
+        color: cartData.color || '#4CAF50',
+        roughness: 0.7,
+        metalness: 0.3
+    });
+    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+    body.position.y = height / 2; // Lift to sit on floor
+    body.castShadow = true;
+    body.receiveShadow = true;
+    cartGroup.add(body);
+
+    // Cart border/frame (darker outline)
+    const edges = new THREE.EdgesGeometry(bodyGeometry);
+    const lineMaterial = new THREE.LineBasicMaterial({ color: 0x333333, linewidth: 2 });
+    const wireframe = new THREE.LineSegments(edges, lineMaterial);
+    wireframe.position.copy(body.position);
+    cartGroup.add(wireframe);
+
+    // Handle (simple horizontal bar in front)
+    const handleGeometry = new THREE.CylinderGeometry(0.05, 0.05, width * 0.8, 8);
+    const handleMaterial = new THREE.MeshStandardMaterial({
+        color: 0x888888,
+        roughness: 0.3,
+        metalness: 0.7
+    });
+    const handle = new THREE.Mesh(handleGeometry, handleMaterial);
+    handle.rotation.z = Math.PI / 2; // Rotate horizontal
+    handle.position.set(0, height / 2, depth / 2 + 0.1); // Front center
+    cartGroup.add(handle);
+
+    // Position cart based on data
+    // Convert normalized 0-1 coords to feet-based 3D coords
+    // Assuming room is 30ft x 25ft centered at origin
+    const roomWidth = 30;
+    const roomDepth = 25;
+    cartGroup.position.x = (cartData.x - 0.5) * roomWidth;
+    cartGroup.position.z = (cartData.y - 0.5) * roomDepth;
+    cartGroup.position.y = 0; // On floor
+
+    // Apply rotation (if exists)
+    if (cartData.rotation !== undefined) {
+        cartGroup.rotation.y = (cartData.rotation * Math.PI) / 180; // Convert degrees to radians
+    }
+
+    // Make clickable
+    body.userData = { cartId: cartData.id };
+    cartGroup.userData.clickable = body; // Reference to clickable mesh
+
+    return cartGroup;
+}
+
+function buildAll3DCarts() {
+    // Clear existing carts
+    cartMeshes.forEach((mesh) => {
+        scene.remove(mesh);
+    });
+    cartMeshes.clear();
+
+    // Create 3D version of each cart
+    CONFIG.carts.forEach(cart => {
+        const cart3D = create3DCart(cart);
+        scene.add(cart3D);
+        cartMeshes.set(cart.id, cart3D);
+    });
+
+    console.log(`✓ Built ${cartMeshes.size} 3D carts`);
+}
+
+// ===== 3D INTERACTION - RAYCASTING =====
+function init3DInteraction() {
+    raycaster = new THREE.Raycaster();
+    mouse = new THREE.Vector2();
+
+    // Create invisible drag plane at floor level
+    const planeGeometry = new THREE.PlaneGeometry(1000, 1000);
+    const planeMaterial = new THREE.MeshBasicMaterial({
+        visible: false,
+        side: THREE.DoubleSide
+    });
+    dragPlane = new THREE.Mesh(planeGeometry, planeMaterial);
+    dragPlane.rotation.x = -Math.PI / 2;
+    dragPlane.position.y = 0;
+    scene.add(dragPlane);
+
+    // Mouse event listeners on 3D renderer
+    renderer.domElement.addEventListener('mousedown', onThreeMouseDown);
+    renderer.domElement.addEventListener('mousemove', onThreeMouseMove);
+    renderer.domElement.addEventListener('mouseup', onThreeMouseUp);
+
+    console.log('✓ 3D interaction enabled');
+}
+
+function onThreeMouseDown(event) {
+    if (STATE.canvasMode !== 'room') return;
+
+    // Calculate mouse position in normalized device coordinates
+    const rect = renderer.domElement.getBoundingClientRect();
+    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+    // Raycast to find intersections
+    raycaster.setFromCamera(mouse, camera);
+
+    // Get all clickable cart meshes
+    const clickableMeshes = [];
+    cartMeshes.forEach((cartGroup) => {
+        if (cartGroup.userData.clickable) {
+            clickableMeshes.push(cartGroup.userData.clickable);
+        }
+    });
+
+    const intersects = raycaster.intersectObjects(clickableMeshes, false);
+
+    if (intersects.length > 0) {
+        // Cart was clicked
+        const cartId = intersects[0].object.userData.cartId;
+        selectCart3D(cartId);
+        selectedCart3D = cartMeshes.get(cartId);
+
+        // Also select in 2D system
+        selectEntity('cart', cartId);
+
+        // Disable orbit controls during drag
+        controls.enabled = false;
+    } else {
+        // Clicked empty space
+        deselectCart3D();
+        deselectEntity();
+    }
+}
+
+function onThreeMouseMove(event) {
+    if (!selectedCart3D) return;
+
+    // Calculate mouse position
+    const rect = renderer.domElement.getBoundingClientRect();
+    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+    // Raycast to drag plane
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObject(dragPlane);
+
+    if (intersects.length > 0) {
+        const point = intersects[0].point;
+
+        // Update 3D position
+        selectedCart3D.position.x = point.x;
+        selectedCart3D.position.z = point.z;
+
+        // Snap to grid if enabled
+        if (STATE.snapToGrid) {
+            const gridSize = 0.25; // feet
+            selectedCart3D.position.x = Math.round(point.x / gridSize) * gridSize;
+            selectedCart3D.position.z = Math.round(point.z / gridSize) * gridSize;
+        }
+
+        // Update 2D data
+        const cart = getEntity('cart', selectedCart3D.userData.cartId);
+        if (cart) {
+            const roomWidth = 30;
+            const roomDepth = 25;
+            cart.x = (selectedCart3D.position.x / roomWidth) + 0.5;
+            cart.y = (selectedCart3D.position.z / roomDepth) + 0.5;
+
+            STATE.unsavedChanges = true;
+            drawCanvas(); // Update 2D view
+            updateInspector(); // Update inspector
+        }
+    }
+}
+
+function onThreeMouseUp(event) {
+    if (selectedCart3D) {
+        selectedCart3D = null;
+        controls.enabled = true; // Re-enable orbit controls
+    }
+}
+
+function selectCart3D(cartId) {
+    // Remove previous selection highlight
+    deselectCart3D();
+
+    const cartGroup = cartMeshes.get(cartId);
+    if (!cartGroup) return;
+
+    // Add selection indicator (glowing outline)
+    const body = cartGroup.userData.clickable;
+    if (body) {
+        body.material = body.material.clone();
+        body.material.emissive = new THREE.Color(0x0e639c);
+        body.material.emissiveIntensity = 0.3;
+    }
+
+    console.log('Selected cart:', cartId);
+}
+
+function deselectCart3D() {
+    cartMeshes.forEach((cartGroup) => {
+        const body = cartGroup.userData.clickable;
+        if (body && body.material.emissive) {
+            body.material.emissive = new THREE.Color(0x000000);
+            body.material.emissiveIntensity = 0;
+        }
+    });
+}
+
 // ===== INITIALIZATION =====
 function init() {
     loadConfiguration();
@@ -209,6 +433,8 @@ function init() {
     createGrid();
     createLighting();
     createOrbitControls();
+    init3DInteraction();
+    buildAll3DCarts();
     animateThreeScene();
     console.log('✅ 3D scene ready!');
 
@@ -716,6 +942,22 @@ function buildCartInspector(cart, container) {
         </div>
 
         <div class="inspector-section">
+            <div class="inspector-section-title">Rotation (3D)</div>
+
+            <div class="form-field">
+                <label>Rotation (degrees)</label>
+                <input type="number" step="1" min="0" max="360" value="${cart.rotation || 0}" onchange="updateCartProperty('rotation', parseFloat(this.value))">
+            </div>
+
+            <div class="form-field" style="display: flex; gap: 5px; margin-top: 8px;">
+                <button class="btn btn-secondary" style="flex: 1; padding: 4px 8px; font-size: 11px;" onclick="updateCartProperty('rotation', 0)">0°</button>
+                <button class="btn btn-secondary" style="flex: 1; padding: 4px 8px; font-size: 11px;" onclick="updateCartProperty('rotation', 90)">90°</button>
+                <button class="btn btn-secondary" style="flex: 1; padding: 4px 8px; font-size: 11px;" onclick="updateCartProperty('rotation', 180)">180°</button>
+                <button class="btn btn-secondary" style="flex: 1; padding: 4px 8px; font-size: 11px;" onclick="updateCartProperty('rotation', 270)">270°</button>
+            </div>
+        </div>
+
+        <div class="inspector-section">
             <div class="inspector-section-title">Dimensions</div>
 
             <div class="form-field-row">
@@ -987,6 +1229,31 @@ function updateCartProperty(prop, value) {
         STATE.unsavedChanges = true;
         buildHierarchy();
         drawCanvas();
+
+        // If color changed, rebuild 3D cart
+        if (prop === 'color' || prop === 'name') {
+            buildAll3DCarts();
+        }
+
+        // If position changed from inspector, update 3D position
+        if (prop === 'x' || prop === 'y') {
+            const cart3D = cartMeshes.get(cart.id);
+            if (cart3D) {
+                const roomWidth = 30;
+                const roomDepth = 25;
+                cart3D.position.x = (cart.x - 0.5) * roomWidth;
+                cart3D.position.z = (cart.y - 0.5) * roomDepth;
+            }
+        }
+
+        // If rotation changed, update 3D rotation
+        if (prop === 'rotation') {
+            const cart3D = cartMeshes.get(cart.id);
+            if (cart3D) {
+                cart3D.rotation.y = (value * Math.PI) / 180; // Convert degrees to radians
+            }
+            updateInspector(); // Refresh to show new value
+        }
     }
 }
 
@@ -1087,6 +1354,7 @@ function createNewCart() {
         y: 0.5,
         width: 80,
         height: 80,
+        rotation: 0, // Default rotation
         isInventory: false
     };
 
@@ -1096,6 +1364,7 @@ function createNewCart() {
     updateStatusBar();
     selectEntity('cart', id);
     drawCanvas();
+    buildAll3DCarts(); // Rebuild 3D scene
     showAlert('New cart created', 'success');
 }
 
@@ -1200,6 +1469,12 @@ function deleteCurrentEntity() {
         buildHierarchy();
         updateStatusBar();
         drawCanvas();
+
+        // If cart was deleted, rebuild 3D scene
+        if (STATE.selectedType === 'cart') {
+            buildAll3DCarts();
+        }
+
         showAlert(`${STATE.selectedType} deleted`, 'success');
     }
 }
@@ -1238,11 +1513,11 @@ function loadConfiguration() {
 
 function loadDefaultConfiguration() {
     CONFIG.carts = [
-        { id: 'airway', name: 'Airway Cart', x: 0.2, y: 0.3, width: 80, height: 80, color: '#4CAF50' },
-        { id: 'med', name: 'Medication Cart', x: 0.8, y: 0.3, width: 80, height: 80, color: '#2196F3' },
-        { id: 'code', name: 'Code Cart', x: 0.2, y: 0.7, width: 80, height: 80, color: '#F44336' },
-        { id: 'trauma', name: 'Trauma Cart', x: 0.8, y: 0.7, width: 80, height: 80, color: '#FF9800' },
-        { id: 'inventory', name: 'Procedure Table', x: 0.5, y: 0.5, width: 80, height: 80, color: '#9C27B0', isInventory: true }
+        { id: 'airway', name: 'Airway Cart', x: 0.2, y: 0.3, width: 80, height: 80, rotation: 0, color: '#4CAF50' },
+        { id: 'med', name: 'Medication Cart', x: 0.8, y: 0.3, width: 80, height: 80, rotation: 90, color: '#2196F3' },
+        { id: 'code', name: 'Code Cart', x: 0.2, y: 0.7, width: 80, height: 80, rotation: 180, color: '#F44336' },
+        { id: 'trauma', name: 'Trauma Cart', x: 0.8, y: 0.7, width: 80, height: 80, rotation: 270, color: '#FF9800' },
+        { id: 'inventory', name: 'Procedure Table', x: 0.5, y: 0.5, width: 80, height: 80, rotation: 0, color: '#9C27B0', isInventory: true }
     ];
 
     CONFIG.drawers = [
@@ -1353,6 +1628,7 @@ function processImport() {
             buildHierarchy();
             updateStatusBar();
             drawCanvas();
+            buildAll3DCarts(); // Rebuild 3D scene
             closeModal('import-modal');
             showAlert('Configuration imported successfully', 'success');
         } catch (error) {
@@ -1373,6 +1649,7 @@ function resetToDefaults() {
     buildHierarchy();
     updateStatusBar();
     drawCanvas();
+    buildAll3DCarts(); // Rebuild 3D scene
     showAlert('Reset to defaults complete', 'success');
 }
 
