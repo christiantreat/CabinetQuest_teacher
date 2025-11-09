@@ -2110,7 +2110,12 @@ function processImport() {
     const reader = new FileReader();
     reader.onload = (e) => {
         try {
-            CONFIG = JSON.parse(e.target.result);
+            let importedConfig = JSON.parse(e.target.result);
+
+            // Validate and migrate configuration
+            importedConfig = validateAndMigrateConfig(importedConfig);
+
+            CONFIG = importedConfig;
             saveConfiguration();
             buildHierarchy();
             updateStatusBar();
@@ -2119,10 +2124,89 @@ function processImport() {
             closeModal('import-modal');
             showAlert('Configuration imported successfully', 'success');
         } catch (error) {
-            showAlert('Invalid configuration file', 'error');
+            console.error('Import error:', error);
+            showAlert('Invalid configuration file: ' + error.message, 'error');
         }
     };
     reader.readAsText(file);
+}
+
+function validateAndMigrateConfig(config) {
+    console.log('Validating configuration...');
+
+    // Check for required properties
+    if (!config.carts || !Array.isArray(config.carts)) {
+        throw new Error('Missing or invalid carts array');
+    }
+
+    // Migrate old 2D configurations to 3D
+    let migrated = false;
+    config.carts.forEach(cart => {
+        // Add rotation if missing
+        if (cart.rotation === undefined) {
+            cart.rotation = 0;
+            migrated = true;
+        }
+
+        // Add type if missing (infer from name or set default)
+        if (!cart.type) {
+            // Try to infer type from name
+            const name = cart.name.toLowerCase();
+            if (name.includes('crash') || name.includes('code')) {
+                cart.type = 'crash';
+            } else if (name.includes('airway')) {
+                cart.type = 'airway';
+            } else if (name.includes('medication') || name.includes('med')) {
+                cart.type = 'medication';
+            } else if (name.includes('iv')) {
+                cart.type = 'iv';
+            } else if (name.includes('procedure') || name.includes('table')) {
+                cart.type = 'procedure';
+            } else if (name.includes('trauma')) {
+                cart.type = 'trauma';
+            } else {
+                cart.type = 'supply'; // Default
+            }
+            migrated = true;
+        }
+    });
+
+    // Ensure other arrays exist
+    config.drawers = config.drawers || [];
+    config.items = config.items || [];
+    config.scenarios = config.scenarios || [];
+    config.achievements = config.achievements || [];
+
+    // Ensure settings exist
+    config.roomSettings = config.roomSettings || {
+        backgroundColor: '#fafafa',
+        width: 800,
+        height: 600
+    };
+
+    config.scoringRules = config.scoringRules || {
+        essentialPoints: 60,
+        optionalPoints: 20,
+        penaltyPoints: 5,
+        perfectBonus: 500,
+        speedThreshold: 60,
+        speedBonus: 300
+    };
+
+    config.generalSettings = config.generalSettings || {
+        appTitle: 'Trauma Room Trainer',
+        enableTutorial: true,
+        enableSound: true,
+        enableHaptics: true
+    };
+
+    if (migrated) {
+        console.log('✓ Configuration migrated from 2D to 3D format');
+        showAlert('Old configuration migrated to 3D format', 'success');
+    }
+
+    console.log('✓ Configuration validated successfully');
+    return config;
 }
 
 function resetToDefaults() {
