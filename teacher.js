@@ -8,6 +8,7 @@ let CONFIG = {
     items: [],
     scenarios: [],
     achievements: [],
+    cameraViews: [], // Camera views for different room perspectives
     roomSettings: {
         backgroundColor: '#fafafa',
         width: 800,
@@ -1191,6 +1192,13 @@ function buildHierarchy() {
             createNew: createNewCart
         },
         {
+            id: 'cameraviews',
+            name: 'Camera Views',
+            icon: '📷',
+            items: CONFIG.cameraViews,
+            createNew: createNewCameraView
+        },
+        {
             id: 'scenarios',
             name: 'Scenarios',
             icon: '📋',
@@ -1325,6 +1333,7 @@ function deselectEntity() {
 function getEntity(type, id) {
     const collections = {
         'cart': CONFIG.carts,
+        'cameraview': CONFIG.cameraViews,
         'scenario': CONFIG.scenarios,
         'drawer': CONFIG.drawers,
         'item': CONFIG.items,
@@ -1353,6 +1362,9 @@ function updateInspector() {
     switch (STATE.selectedType) {
         case 'cart':
             buildCartInspector(entity, container);
+            break;
+        case 'cameraview':
+            buildCameraViewInspector(entity, container);
             break;
         case 'scenario':
             buildScenarioInspector(entity, container);
@@ -1465,6 +1477,122 @@ function buildCartInspector(cart, container) {
         <div class="inspector-section">
             <div class="inspector-section-title">Actions</div>
             <button class="btn btn-danger btn-block" onclick="deleteCurrentEntity()">🗑️ Delete Cart</button>
+        </div>
+    `;
+}
+
+function buildCameraViewInspector(view, container) {
+    const cartOptions = CONFIG.carts.filter(c => !c.isInventory).map(c =>
+        `<option value="${c.id}" ${view.targetCart === c.id ? 'selected' : ''}>${c.name}</option>`
+    ).join('');
+
+    const drawerOptions = CONFIG.drawers.map(d =>
+        `<option value="${d.id}" ${view.targetDrawer === d.id ? 'selected' : ''}>${d.name}</option>`
+    ).join('');
+
+    container.innerHTML = `
+        <div class="inspector-section">
+            <div class="inspector-section-title">Camera View Properties</div>
+
+            <div class="form-field">
+                <label>Name</label>
+                <input type="text" value="${view.name}" onchange="updateCameraViewProperty('name', this.value)">
+            </div>
+
+            <div class="form-field">
+                <label>Description</label>
+                <textarea onchange="updateCameraViewProperty('description', this.value)">${view.description}</textarea>
+            </div>
+
+            <div class="form-field">
+                <label>View Type</label>
+                <select onchange="updateCameraViewProperty('type', this.value)">
+                    <option value="overview" ${view.type === 'overview' ? 'selected' : ''}>Room Overview</option>
+                    <option value="closeup" ${view.type === 'closeup' ? 'selected' : ''}>Close-up</option>
+                    <option value="custom" ${view.type === 'custom' ? 'selected' : ''}>Custom</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="inspector-section">
+            <div class="inspector-section-title">Camera Position (feet)</div>
+
+            <div class="form-field">
+                <label>X Position</label>
+                <input type="number" step="0.5" value="${view.position.x}" onchange="updateCameraViewPosition('x', parseFloat(this.value))">
+            </div>
+
+            <div class="form-field">
+                <label>Y Position (height)</label>
+                <input type="number" step="0.5" value="${view.position.y}" onchange="updateCameraViewPosition('y', parseFloat(this.value))">
+            </div>
+
+            <div class="form-field">
+                <label>Z Position</label>
+                <input type="number" step="0.5" value="${view.position.z}" onchange="updateCameraViewPosition('z', parseFloat(this.value))">
+            </div>
+        </div>
+
+        <div class="inspector-section">
+            <div class="inspector-section-title">Look At Target (feet)</div>
+
+            <div class="form-field">
+                <label>X Target</label>
+                <input type="number" step="0.5" value="${view.lookAt.x}" onchange="updateCameraViewLookAt('x', parseFloat(this.value))">
+            </div>
+
+            <div class="form-field">
+                <label>Y Target</label>
+                <input type="number" step="0.5" value="${view.lookAt.y}" onchange="updateCameraViewLookAt('y', parseFloat(this.value))">
+            </div>
+
+            <div class="form-field">
+                <label>Z Target</label>
+                <input type="number" step="0.5" value="${view.lookAt.z}" onchange="updateCameraViewLookAt('z', parseFloat(this.value))">
+            </div>
+        </div>
+
+        <div class="inspector-section">
+            <div class="inspector-section-title">Camera Settings</div>
+
+            <div class="form-field">
+                <label>Field of View (FOV)</label>
+                <input type="number" min="30" max="120" value="${view.fov}" onchange="updateCameraViewProperty('fov', parseFloat(this.value))">
+            </div>
+        </div>
+
+        <div class="inspector-section">
+            <div class="inspector-section-title">Presets</div>
+
+            <button class="btn btn-secondary btn-block" onclick="setCameraViewPreset('entry')">📍 Entry View</button>
+            <button class="btn btn-secondary btn-block" onclick="setCameraViewPreset('overhead')">🔝 Overhead View</button>
+            <button class="btn btn-secondary btn-block" onclick="setCameraViewPreset('current')">📷 Use Current 3D View</button>
+        </div>
+
+        <div class="inspector-section">
+            <div class="inspector-section-title">Target (Optional)</div>
+
+            <div class="form-field">
+                <label>Target Cart</label>
+                <select onchange="updateCameraViewProperty('targetCart', this.value || null)">
+                    <option value="">None</option>
+                    ${cartOptions}
+                </select>
+            </div>
+
+            <div class="form-field">
+                <label>Target Drawer</label>
+                <select onchange="updateCameraViewProperty('targetDrawer', this.value || null)">
+                    <option value="">None</option>
+                    ${drawerOptions}
+                </select>
+            </div>
+        </div>
+
+        <div class="inspector-section">
+            <div class="inspector-section-title">Actions</div>
+            <button class="btn btn-primary btn-block" onclick="previewCameraView()">👁️ Preview in 3D</button>
+            <button class="btn btn-danger btn-block" onclick="deleteCurrentEntity()">🗑️ Delete Camera View</button>
         </div>
     `;
 }
@@ -1753,6 +1881,80 @@ function updateScenarioProperty(prop, value) {
     }
 }
 
+function updateCameraViewProperty(prop, value) {
+    const view = getEntity('cameraview', STATE.selectedId);
+    if (view) {
+        view[prop] = value;
+        STATE.unsavedChanges = true;
+        buildHierarchy();
+    }
+}
+
+function updateCameraViewPosition(axis, value) {
+    const view = getEntity('cameraview', STATE.selectedId);
+    if (view) {
+        view.position[axis] = value;
+        STATE.unsavedChanges = true;
+    }
+}
+
+function updateCameraViewLookAt(axis, value) {
+    const view = getEntity('cameraview', STATE.selectedId);
+    if (view) {
+        view.lookAt[axis] = value;
+        STATE.unsavedChanges = true;
+    }
+}
+
+function setCameraViewPreset(preset) {
+    const view = getEntity('cameraview', STATE.selectedId);
+    if (!view) return;
+
+    switch (preset) {
+        case 'entry':
+            // Entry view - as if entering from the front
+            view.position = { x: 0, y: 1.67, z: 12 };
+            view.lookAt = { x: 0, y: 0, z: 0 };
+            view.fov = 75;
+            break;
+        case 'overhead':
+            // Overhead view - bird's eye view of the room
+            view.position = { x: 0, y: 15, z: 0 };
+            view.lookAt = { x: 0, y: 0, z: 0 };
+            view.fov = 60;
+            break;
+        case 'current':
+            // Use current 3D camera view
+            if (camera) {
+                view.position = { x: camera.position.x, y: camera.position.y, z: camera.position.z };
+                view.lookAt = { x: controls.target.x, y: controls.target.y, z: controls.target.z };
+                view.fov = camera.fov;
+            }
+            break;
+    }
+
+    STATE.unsavedChanges = true;
+    updateInspector();
+    showAlert(`Camera preset "${preset}" applied`, 'success');
+}
+
+function previewCameraView() {
+    const view = getEntity('cameraview', STATE.selectedId);
+    if (!view || !camera) return;
+
+    // Animate camera to the view position
+    camera.position.set(view.position.x, view.position.y, view.position.z);
+    camera.fov = view.fov;
+    camera.updateProjectionMatrix();
+
+    if (controls) {
+        controls.target.set(view.lookAt.x, view.lookAt.y, view.lookAt.z);
+        controls.update();
+    }
+
+    showAlert(`Previewing camera view: ${view.name}`, 'success');
+}
+
 function updateDrawerProperty(prop, value) {
     const drawer = getEntity('drawer', STATE.selectedId);
     if (drawer) {
@@ -1855,6 +2057,28 @@ function createNewCart() {
     showAlert('New cart created', 'success');
 }
 
+function createNewCameraView() {
+    const id = `camera_${Date.now()}`;
+    const newCameraView = {
+        id: id,
+        name: 'New Camera View',
+        description: 'Camera view description',
+        position: { x: 0, y: 5, z: 15 }, // Camera position (feet)
+        lookAt: { x: 0, y: 0, z: 0 },    // Where camera looks
+        fov: 75,                          // Field of view
+        type: 'custom',                   // 'overview', 'closeup', 'custom'
+        targetCart: null,                 // For cart-specific views
+        targetDrawer: null                // For drawer close-ups
+    };
+
+    CONFIG.cameraViews.push(newCameraView);
+    STATE.unsavedChanges = true;
+    buildHierarchy();
+    updateStatusBar();
+    selectEntity('cameraview', id);
+    showAlert('New camera view created', 'success');
+}
+
 function createNewScenario() {
     const id = `scenario_${Date.now()}`;
     const newScenario = {
@@ -1941,6 +2165,7 @@ function deleteCurrentEntity() {
 
     const collections = {
         'cart': CONFIG.carts,
+        'cameraview': CONFIG.cameraViews,
         'scenario': CONFIG.scenarios,
         'drawer': CONFIG.drawers,
         'item': CONFIG.items,
@@ -1969,6 +2194,7 @@ function deleteCurrentEntity() {
 // ===== STATUS BAR =====
 function updateStatusBar() {
     document.getElementById('status-carts').textContent = CONFIG.carts.filter(c => !c.isInventory).length;
+    document.getElementById('status-cameras').textContent = CONFIG.cameraViews.length;
     document.getElementById('status-scenarios').textContent = CONFIG.scenarios.length;
     document.getElementById('status-drawers').textContent = CONFIG.drawers.length;
     document.getElementById('status-items').textContent = CONFIG.items.length;
@@ -2077,6 +2303,64 @@ function loadDefaultConfiguration() {
         { id: 'first-scenario', title: 'First Steps', description: 'Complete your first scenario', icon: '🎯', trigger: 'first-scenario' },
         { id: 'perfect-score', title: 'Perfectionist', description: 'Get a perfect score', icon: '💯', trigger: 'perfect-score' },
         { id: 'speed-demon', title: 'Speed Demon', description: 'Complete in under 30 seconds', icon: '⚡', trigger: 'speed', value: 30 }
+    ];
+
+    CONFIG.cameraViews = [
+        {
+            id: 'entry-view',
+            name: 'Entry View',
+            description: 'Room view as you first enter',
+            position: { x: 0, y: 1.67, z: 12 },
+            lookAt: { x: 0, y: 0, z: 0 },
+            fov: 75,
+            type: 'overview',
+            targetCart: null,
+            targetDrawer: null
+        },
+        {
+            id: 'overhead-view',
+            name: 'Overhead View',
+            description: 'Bird\'s eye view of the entire room',
+            position: { x: 0, y: 15, z: 0 },
+            lookAt: { x: 0, y: 0, z: 0 },
+            fov: 60,
+            type: 'overview',
+            targetCart: null,
+            targetDrawer: null
+        },
+        {
+            id: 'airway-closeup',
+            name: 'Airway Cart Close-up',
+            description: 'Close-up view of the Airway Cart',
+            position: { x: -6, y: 2, z: -5 },
+            lookAt: { x: -6, y: 1.5, z: -7 },
+            fov: 65,
+            type: 'closeup',
+            targetCart: 'airway',
+            targetDrawer: null
+        },
+        {
+            id: 'med-closeup',
+            name: 'Medication Cart Close-up',
+            description: 'Close-up view of the Medication Cart',
+            position: { x: 6, y: 2, z: -5 },
+            lookAt: { x: 6, y: 1.5, z: -7 },
+            fov: 65,
+            type: 'closeup',
+            targetCart: 'med',
+            targetDrawer: null
+        },
+        {
+            id: 'code-closeup',
+            name: 'Code Cart Close-up',
+            description: 'Close-up view of the Crash Cart',
+            position: { x: -6, y: 2, z: 3 },
+            lookAt: { x: -6, y: 1.5, z: 5 },
+            fov: 65,
+            type: 'closeup',
+            targetCart: 'code',
+            targetDrawer: null
+        }
     ];
 
     saveConfiguration();

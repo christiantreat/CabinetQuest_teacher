@@ -39,6 +39,8 @@ const ROOM_HEIGHT = 10; // feet
 
 // Configuration data
 let CONFIG = null;
+let currentCameraView = null; // Current active camera view
+let isFirstPersonMode = true; // Toggle between first-person and camera views
 
 // ============================================================================
 // SOUND EFFECTS SYSTEM
@@ -301,6 +303,94 @@ function toggleFPSCounter() {
         fpsCounter.style.display = isVisible ? 'none' : 'block';
         console.log(`FPS counter ${isVisible ? 'hidden' : 'shown'}`);
     }
+}
+
+// ============================================================================
+// CAMERA VIEW SYSTEM
+// ============================================================================
+
+function switchCameraView(viewId) {
+    if (!CONFIG || !CONFIG.cameraViews) return;
+
+    const view = CONFIG.cameraViews.find(v => v.id === viewId);
+    if (!view) return;
+
+    currentCameraView = view;
+    isFirstPersonMode = false;
+
+    // Apply camera view
+    playerPosition.set(view.position.x, view.position.y, view.position.z);
+    camera.fov = view.fov;
+    camera.updateProjectionMatrix();
+
+    // Look at target
+    const lookAt = new THREE.Vector3(view.lookAt.x, view.lookAt.y, view.lookAt.z);
+    const direction = lookAt.sub(playerPosition).normalize();
+
+    playerRotation.yaw = Math.atan2(direction.x, direction.z);
+    playerRotation.pitch = Math.asin(-direction.y);
+
+    console.log(`Switched to camera view: ${view.name}`);
+    showNotification(`Camera View: ${view.name}`);
+}
+
+function toggleFirstPersonMode() {
+    isFirstPersonMode = !isFirstPersonMode;
+
+    if (isFirstPersonMode) {
+        // Reset to first-person mode
+        currentCameraView = null;
+        camera.fov = 75;
+        camera.updateProjectionMatrix();
+        showNotification('First Person Mode');
+    } else if (CONFIG && CONFIG.cameraViews && CONFIG.cameraViews.length > 0) {
+        // Switch to first available camera view
+        switchCameraView(CONFIG.cameraViews[0].id);
+    }
+}
+
+function cycleCameraViews(direction = 1) {
+    if (!CONFIG || !CONFIG.cameraViews || CONFIG.cameraViews.length === 0) return;
+
+    if (isFirstPersonMode) {
+        // Switch from first-person to first camera view
+        switchCameraView(CONFIG.cameraViews[0].id);
+        return;
+    }
+
+    const currentIndex = CONFIG.cameraViews.findIndex(v => v.id === currentCameraView?.id);
+    let nextIndex = (currentIndex + direction + CONFIG.cameraViews.length) % CONFIG.cameraViews.length;
+
+    // If cycling back to start, go to first-person mode
+    if (direction > 0 && nextIndex === 0 && currentIndex === CONFIG.cameraViews.length - 1) {
+        toggleFirstPersonMode();
+        return;
+    }
+
+    switchCameraView(CONFIG.cameraViews[nextIndex].id);
+}
+
+function showNotification(message) {
+    const notification = document.createElement('div');
+    notification.style.position = 'absolute';
+    notification.style.top = '100px';
+    notification.style.left = '50%';
+    notification.style.transform = 'translateX(-50%)';
+    notification.style.background = 'rgba(0, 0, 0, 0.8)';
+    notification.style.color = 'white';
+    notification.style.padding = '10px 20px';
+    notification.style.borderRadius = '5px';
+    notification.style.fontSize = '14px';
+    notification.style.zIndex = '1000';
+    notification.textContent = message;
+
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transition = 'opacity 0.5s';
+        setTimeout(() => notification.remove(), 500);
+    }, 2000);
 }
 
 // ============================================================================
@@ -688,6 +778,18 @@ function onKeyDown(event) {
         interactWithDrawer(lookingAtDrawer);
     }
 
+    // Camera view switching
+    if (key === 'c') {
+        event.preventDefault();
+        cycleCameraViews(1);
+    }
+
+    // Toggle first-person / camera view mode
+    if (key === 'v') {
+        event.preventDefault();
+        toggleFirstPersonMode();
+    }
+
     // Debug - FPS counter toggle
     if (key === 'f3') {
         event.preventDefault();
@@ -765,6 +867,9 @@ function animate() {
 }
 
 function updatePlayerMovement(deltaTime) {
+    // Only allow movement in first-person mode
+    if (!isFirstPersonMode) return;
+
     // Calculate movement direction based on camera facing
     const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
     forward.y = 0; // Keep on horizontal plane
