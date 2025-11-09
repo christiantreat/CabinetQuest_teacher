@@ -938,52 +938,59 @@ function checkForItems(drawerId, drawerName) {
 // ============================================================================
 
 function loadScenarios() {
-    // Load scenarios from localStorage or use defaults
-    try {
-        const saved = localStorage.getItem('traumaRoomScenarios');
-        if (saved) {
-            return JSON.parse(saved);
-        }
-    } catch (error) {
-        console.error('Error loading scenarios:', error);
+    // Load scenarios from the designer's configuration
+    if (CONFIG && CONFIG.scenarios && CONFIG.scenarios.length > 0) {
+        // Convert designer scenarios to trainer format
+        return CONFIG.scenarios.map(scenario => {
+            // Build items list from essential and optional items
+            const items = [];
+
+            if (scenario.essential) {
+                scenario.essential.forEach(itemId => {
+                    const itemData = CONFIG.items.find(i => i.id === itemId);
+                    if (itemData) {
+                        items.push({
+                            itemId: itemId,
+                            name: itemData.name,
+                            essential: true
+                        });
+                    }
+                });
+            }
+
+            if (scenario.optional) {
+                scenario.optional.forEach(itemId => {
+                    const itemData = CONFIG.items.find(i => i.id === itemId);
+                    if (itemData) {
+                        items.push({
+                            itemId: itemId,
+                            name: itemData.name,
+                            essential: false
+                        });
+                    }
+                });
+            }
+
+            return {
+                id: scenario.id,
+                name: scenario.name,
+                description: scenario.description,
+                items: items,
+                timeLimit: 300, // Default 5 minutes
+                difficulty: 'intermediate'
+            };
+        });
     }
 
-    // Default scenarios
+    // Fallback: Default scenario if no scenarios configured
+    console.warn('No scenarios found in configuration, using default');
     return [
         {
             id: 'scenario1',
-            name: 'Airway Emergency',
-            description: 'Prepare for intubation - find the necessary airway equipment',
-            items: [
-                { itemId: 'item1', name: 'Endotracheal Tube' },
-                { itemId: 'item2', name: 'Laryngoscope' },
-                { itemId: 'item3', name: 'Suction Device' }
-            ],
-            timeLimit: 300, // 5 minutes
-            difficulty: 'beginner'
-        },
-        {
-            id: 'scenario2',
-            name: 'Cardiac Arrest',
-            description: 'Locate crash cart medications and defibrillator',
-            items: [
-                { itemId: 'item4', name: 'Epinephrine' },
-                { itemId: 'item5', name: 'Amiodarone' },
-                { itemId: 'item6', name: 'Defibrillator Pads' }
-            ],
-            timeLimit: 240,
-            difficulty: 'intermediate'
-        },
-        {
-            id: 'scenario3',
-            name: 'Medication Prep',
-            description: 'Gather all necessary items for medication administration',
-            items: [
-                { itemId: 'item7', name: 'Syringes' },
-                { itemId: 'item8', name: 'IV Catheter' },
-                { itemId: 'item9', name: 'Alcohol Swabs' }
-            ],
-            timeLimit: 180,
+            name: 'Practice Mode',
+            description: 'Explore the room and practice opening drawers',
+            items: [],
+            timeLimit: 300,
             difficulty: 'beginner'
         }
     ];

@@ -2225,11 +2225,11 @@ function resetToDefaults() {
 }
 
 function previewGame() {
-    // Save current config to a preview-specific storage key
-    localStorage.setItem('traumaRoomPreviewConfig', JSON.stringify(CONFIG));
+    // Save current config to localStorage so trainer can use it
+    saveConfiguration();
 
-    // Open the game with a query parameter to indicate preview mode
-    const previewUrl = 'index.html?preview=true';
+    // Open the trainer page (the actual game)
+    const previewUrl = 'trainer.html';
     const previewWindow = window.open(previewUrl, '_blank');
 
     if (previewWindow) {
