@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trauma Room Trainer - Training Mode</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* Main container */
+        #game-container {
+            width: 100%;
+            height: 100vh;
+            position: relative;
+        }
+
+        /* 3D Canvas */
+        #three-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            cursor: none; /* Hide cursor in first-person mode */
+        }
+
+        /* HUD Overlay */
+        .hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        /* Crosshair */
+        .crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+        }
+
+        .crosshair::before,
+        .crosshair::after {
+            content: '';
+            position: absolute;
+            background: rgba(255, 255, 255, 0.8);
+        }
+
+        .crosshair::before {
+            width: 2px;
+            height: 20px;
+            left: 9px;
+            top: 0;
+        }
+
+        .crosshair::after {
+            width: 20px;
+            height: 2px;
+            left: 0;
+            top: 9px;
+        }
+
+        /* Scenario UI */
+        .scenario-panel {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px 30px;
+            border-radius: 10px;
+            border: 2px solid #0e639c;
+            min-width: 400px;
+            text-align: center;
+            pointer-events: all;
+        }
+
+        .scenario-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #0e639c;
+            margin-bottom: 10px;
+        }
+
+        .scenario-description {
+            font-size: 14px;
+            color: #ccc;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+
+        .item-needed {
+            background: rgba(14, 99, 156, 0.2);
+            border: 1px solid #0e639c;
+            padding: 8px 15px;
+            border-radius: 5px;
+            margin: 5px;
+            display: inline-block;
+            font-size: 13px;
+        }
+
+        .item-found {
+            background: rgba(14, 122, 13, 0.3);
+            border-color: #0e7a0d;
+            color: #4CAF50;
+            text-decoration: line-through;
+        }
+
+        /* Timer */
+        .timer {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px 25px;
+            border-radius: 8px;
+            border: 2px solid #0e639c;
+            font-size: 32px;
+            font-weight: bold;
+            color: #0e639c;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* Progress */
+        .progress-bar {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 400px;
+            height: 30px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #0e639c;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0e639c, #4CAF50);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-weight: bold;
+            font-size: 14px;
+            text-shadow: 0 0 5px rgba(0,0,0,0.8);
+        }
+
+        /* Interaction prompt */
+        .interact-prompt {
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 10px 20px;
+            border-radius: 5px;
+            border: 2px solid #0e639c;
+            font-size: 16px;
+            display: none;
+            pointer-events: all;
+        }
+
+        .interact-prompt.visible {
+            display: block;
+        }
+
+        /* Instructions */
+        .instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 5px;
+            font-size: 12px;
+            color: #aaa;
+        }
+
+        .instructions div {
+            margin: 3px 0;
+        }
+
+        /* Menu Screen */
+        .menu-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1e1e1e 0%, #2d2d30 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            pointer-events: all;
+        }
+
+        .menu-screen.hidden {
+            display: none;
+        }
+
+        .menu-title {
+            font-size: 48px;
+            font-weight: bold;
+            color: #0e639c;
+            margin-bottom: 20px;
+        }
+
+        .menu-subtitle {
+            font-size: 18px;
+            color: #999;
+            margin-bottom: 40px;
+        }
+
+        .scenario-list {
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .scenario-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid #3e3e42;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .scenario-item:hover {
+            border-color: #0e639c;
+            background: rgba(14, 99, 156, 0.1);
+        }
+
+        .scenario-item-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #fff;
+            margin-bottom: 8px;
+        }
+
+        .scenario-item-desc {
+            font-size: 14px;
+            color: #999;
+        }
+
+        /* Completion Screen */
+        .completion-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            pointer-events: all;
+        }
+
+        .completion-screen.visible {
+            display: flex;
+        }
+
+        .completion-title {
+            font-size: 64px;
+            font-weight: bold;
+            color: #4CAF50;
+            margin-bottom: 20px;
+        }
+
+        .completion-stats {
+            font-size: 24px;
+            color: #ccc;
+            margin: 10px 0;
+        }
+
+        .completion-score {
+            font-size: 72px;
+            font-weight: bold;
+            color: #0e639c;
+            margin: 30px 0;
+        }
+
+        .completion-button {
+            background: #0e639c;
+            color: #fff;
+            border: none;
+            padding: 15px 40px;
+            font-size: 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+            transition: background 0.2s;
+        }
+
+        .completion-button:hover {
+            background: #1177bb;
+        }
+
+        /* Mobile Controls */
+        .mobile-controls {
+            display: none;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 200px;
+            pointer-events: all;
+        }
+
+        @media (max-width: 768px) {
+            .mobile-controls {
+                display: block;
+            }
+
+            .instructions {
+                display: none;
+            }
+        }
+
+        #joystick-container {
+            position: absolute;
+            bottom: 50px;
+            left: 50px;
+            width: 120px;
+            height: 120px;
+        }
+
+        /* Loading screen */
+        .loading-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1e1e1e 0%, #2d2d30 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 1;
+            transition: opacity 0.8s ease-out;
+        }
+
+        .loading-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loading-screen.fade-out {
+            animation: fadeOut 0.8s ease-out forwards;
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #3e3e42;
+            border-top-color: #0e639c;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            margin-top: 20px;
+            font-size: 18px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loading-screen">
+        <div class="menu-title" style="margin-bottom: 40px;">🏥 Trauma Room Trainer</div>
+        <div class="loading-spinner"></div>
+        <div class="loading-text" id="loading-text">Initializing 3D environment...</div>
+        <div style="margin-top: 30px; font-size: 12px; color: #666;">
+            <div id="loading-progress"></div>
+        </div>
+        <div style="margin-top: 60px; font-size: 11px; color: #555;">
+            Version 1.0 | Powered by Three.js
+        </div>
+    </div>
+
+    <!-- Menu Screen -->
+    <div class="menu-screen" id="menu-screen">
+        <div class="menu-title">🏥 Trauma Room Trainer</div>
+        <div class="menu-subtitle">Select a scenario to begin training</div>
+        <div class="scenario-list" id="scenario-list">
+            <!-- Scenarios will be populated here -->
+        </div>
+
+        <!-- Quality Settings -->
+        <div style="margin-top: 30px; text-align: center;">
+            <div style="font-size: 14px; color: #999; margin-bottom: 10px;">Graphics Quality:</div>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button class="completion-button" onclick="changeQuality('low')" id="quality-low" style="padding: 10px 20px;">
+                    Low
+                </button>
+                <button class="completion-button" onclick="changeQuality('medium')" id="quality-medium" style="padding: 10px 20px;">
+                    Medium
+                </button>
+                <button class="completion-button" onclick="changeQuality('high')" id="quality-high" style="padding: 10px 20px;">
+                    High
+                </button>
+            </div>
+            <div id="quality-info" style="font-size: 12px; color: #666; margin-top: 8px;"></div>
+        </div>
+
+        <button class="completion-button" onclick="window.location.href='teacher.html'" style="margin-top: 20px;">
+            📝 Back to Designer
+        </button>
+    </div>
+
+    <!-- Game Container -->
+    <div id="game-container">
+        <canvas id="three-canvas"></canvas>
+
+        <!-- HUD -->
+        <div class="hud">
+            <div class="crosshair"></div>
+
+            <!-- Scenario Panel -->
+            <div class="scenario-panel" id="scenario-panel">
+                <div class="scenario-title" id="scenario-title">Scenario Title</div>
+                <div class="scenario-description" id="scenario-description">Description</div>
+                <div id="items-needed">
+                    <div class="item-needed">Item 1</div>
+                    <div class="item-needed">Item 2</div>
+                </div>
+            </div>
+
+            <!-- Timer -->
+            <div class="timer" id="timer">00:00</div>
+
+            <!-- FPS Counter (optional) -->
+            <div class="timer" id="fps-counter" style="top: 80px; font-size: 16px; padding: 8px 15px; display: none;">
+                FPS: <span id="fps-value">60</span>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+                <div class="progress-text" id="progress-text">0 / 0 items found</div>
+            </div>
+
+            <!-- Interaction Prompt -->
+            <div class="interact-prompt" id="interact-prompt">
+                Press E to open drawer
+            </div>
+
+            <!-- Instructions -->
+            <div class="instructions">
+                <div><strong>Movement:</strong> WASD or Arrow Keys</div>
+                <div><strong>Look:</strong> Mouse</div>
+                <div><strong>Interact:</strong> E Key (when prompted)</div>
+                <div><strong>Sprint:</strong> Hold Shift</div>
+                <div><strong>FPS Display:</strong> F3</div>
+                <div><strong>Menu:</strong> ESC</div>
+            </div>
+        </div>
+
+        <!-- Mobile Controls -->
+        <div class="mobile-controls">
+            <div id="joystick-container"></div>
+        </div>
+
+        <!-- Completion Screen -->
+        <div class="completion-screen" id="completion-screen">
+            <div class="completion-title">✓ Scenario Complete!</div>
+            <div class="completion-stats">
+                Time: <span id="final-time">00:00</span>
+            </div>
+            <div class="completion-stats">
+                Items Found: <span id="final-items">0/0</span>
+            </div>
+            <div class="completion-score" id="final-score">1000</div>
+            <div class="completion-stats" style="color: #4CAF50;">
+                <span id="achievement-text"></span>
+            </div>
+            <div>
+                <button class="completion-button" onclick="restartScenario()">↻ Retry</button>
+                <button class="completion-button" onclick="showMenu()">📋 Scenario Menu</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Three.js Library -->
+    <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+
+    <!-- OrbitControls - Inline implementation (same as teacher.html) -->
+    <script>
+        // Simplified OrbitControls implementation (not used in training but needed for compatibility)
+        (function() {
+            if (typeof THREE === 'undefined') return;
+            THREE.OrbitControls = function(camera, domElement) {
+                this.camera = camera;
+                this.domElement = domElement;
+                this.enabled = true;
+                this.target = new THREE.Vector3();
+                this.update = function() {};
+            };
+        })();
+    </script>
+
+    <script src="trainer.js"></script>
+</body>
+</html>
