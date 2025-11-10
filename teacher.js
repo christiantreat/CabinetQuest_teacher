@@ -38,7 +38,7 @@ let STATE = {
     draggedCart: null,
     mousePos: {x: 0, y: 0},
     unsavedChanges: false,
-    snapToGrid: false,
+    snapToGrid: true, // Default to snap to grid enabled
     gridSize: 50
 };
 
@@ -826,8 +826,21 @@ function create3DCart(cartData) {
 }
 
 function buildAll3DCarts() {
-    // Clear existing carts
+    // Clear existing carts with proper disposal
     cartMeshes.forEach((mesh) => {
+        // Recursively dispose of all children geometries and materials
+        mesh.traverse((child) => {
+            if (child.geometry) {
+                child.geometry.dispose();
+            }
+            if (child.material) {
+                if (Array.isArray(child.material)) {
+                    child.material.forEach(mat => mat.dispose());
+                } else {
+                    child.material.dispose();
+                }
+            }
+        });
         scene.remove(mesh);
     });
     cartMeshes.clear();
@@ -1531,6 +1544,10 @@ function toggleCameraView() {
         const targetLookAt = new THREE.Vector3(0, 0, 0);
 
         animateCameraTo(targetPosition, targetLookAt, () => {
+            // Standardize camera rotation for consistent top-down orientation
+            // Looking straight down with no roll (z-axis rotation)
+            camera.rotation.set(-Math.PI / 2, 0, 0);
+
             cameraViewMode = 'topDown';
             if (controls.enabled !== undefined) {
                 controls.enabled = false; // Disable orbit controls in top-down
@@ -1592,15 +1609,12 @@ function buildHierarchy() {
     const tree = document.getElementById('hierarchy-tree');
     tree.innerHTML = '';
 
-    // Build categories
+    // Build Carts category with nested drawers
+    const cartsCategory = createCartsWithDrawersNode();
+    tree.appendChild(cartsCategory);
+
+    // Build other categories (excluding drawers since they're now nested under carts)
     const categories = [
-        {
-            id: 'carts',
-            name: 'Carts',
-            icon: '🛒',
-            items: CONFIG.carts,
-            createNew: createNewCart
-        },
         {
             id: 'cameraviews',
             name: 'Camera Views',
@@ -1614,13 +1628,6 @@ function buildHierarchy() {
             icon: '📋',
             items: CONFIG.scenarios,
             createNew: createNewScenario
-        },
-        {
-            id: 'drawers',
-            name: 'Drawers',
-            icon: '🗄️',
-            items: CONFIG.drawers,
-            createNew: createNewDrawer
         },
         {
             id: 'items',
@@ -1642,6 +1649,132 @@ function buildHierarchy() {
         const categoryDiv = createCategoryNode(category);
         tree.appendChild(categoryDiv);
     });
+}
+
+function createCartsWithDrawersNode() {
+    const div = document.createElement('div');
+    div.className = 'tree-category';
+
+    const carts = CONFIG.carts || [];
+
+    // Category header
+    const header = document.createElement('div');
+    header.className = 'tree-category-header';
+    header.innerHTML = `
+        <span class="tree-category-icon">▼</span>
+        <span class="tree-item-icon">🛒</span>
+        <span class="tree-item-name">Carts</span>
+        <span class="tree-item-count">${carts.length}</span>
+    `;
+    header.onclick = () => {
+        div.classList.toggle('collapsed');
+    };
+
+    const itemsDiv = document.createElement('div');
+    itemsDiv.className = 'tree-category-items';
+
+    // Add "Create New Cart" button
+    const createBtn = document.createElement('div');
+    createBtn.className = 'tree-item';
+    createBtn.style.fontStyle = 'italic';
+    createBtn.style.color = '#0e639c';
+    createBtn.innerHTML = `<span class="tree-item-icon">+</span><span class="tree-item-name">Create New Cart</span>`;
+    createBtn.onclick = createNewCart;
+    itemsDiv.appendChild(createBtn);
+
+    // Add each cart with its nested drawers
+    carts.forEach(cart => {
+        // Cart item container
+        const cartContainer = document.createElement('div');
+        cartContainer.className = 'tree-item-container';
+
+        // Cart item
+        const cartItem = document.createElement('div');
+        cartItem.className = 'tree-item';
+        if (STATE.selectedType === 'cart' && STATE.selectedId === cart.id) {
+            cartItem.classList.add('selected');
+        }
+
+        // Find drawers for this cart
+        const cartDrawers = CONFIG.drawers.filter(d => d.cart === cart.id);
+        const hasDrawers = cartDrawers.length > 0;
+
+        cartItem.innerHTML = `
+            <span class="tree-category-icon" style="font-size: 10px; margin-right: 2px;">${hasDrawers ? '▼' : ''}</span>
+            <span class="tree-item-icon">🛒</span>
+            <span class="tree-item-name">${cart.name || cart.id}</span>
+            ${hasDrawers ? `<span class="tree-item-count" style="font-size: 9px;">${cartDrawers.length}</span>` : ''}
+        `;
+
+        // Click on cart to select it
+        cartItem.onclick = (e) => {
+            // If clicking the expand icon, toggle drawers
+            if (e.target.classList.contains('tree-category-icon')) {
+                cartContainer.classList.toggle('collapsed');
+                e.stopPropagation();
+            } else {
+                selectEntity('cart', cart.id);
+            }
+        };
+
+        cartContainer.appendChild(cartItem);
+
+        // Add nested drawers if any
+        if (hasDrawers) {
+            const drawersDiv = document.createElement('div');
+            drawersDiv.className = 'tree-nested-items';
+            drawersDiv.style.marginLeft = '20px';
+
+            // Add "Create New Drawer" button for this cart
+            const createDrawerBtn = document.createElement('div');
+            createDrawerBtn.className = 'tree-item tree-nested-item';
+            createDrawerBtn.style.fontStyle = 'italic';
+            createDrawerBtn.style.color = '#0e639c';
+            createDrawerBtn.style.fontSize = '11px';
+            createDrawerBtn.innerHTML = `<span class="tree-item-icon">+</span><span class="tree-item-name">Add Drawer</span>`;
+            createDrawerBtn.onclick = (e) => {
+                e.stopPropagation();
+                createNewDrawer();
+                // Auto-assign to this cart
+                setTimeout(() => {
+                    const newDrawer = CONFIG.drawers[CONFIG.drawers.length - 1];
+                    if (newDrawer && !newDrawer.cart) {
+                        newDrawer.cart = cart.id;
+                        buildHierarchy();
+                        updateInspector();
+                    }
+                }, 100);
+            };
+            drawersDiv.appendChild(createDrawerBtn);
+
+            cartDrawers.forEach(drawer => {
+                const drawerItem = document.createElement('div');
+                drawerItem.className = 'tree-item tree-nested-item';
+                drawerItem.style.fontSize = '11px';
+                if (STATE.selectedType === 'drawer' && STATE.selectedId === drawer.id) {
+                    drawerItem.classList.add('selected');
+                }
+                drawerItem.innerHTML = `
+                    <span class="tree-item-icon">🗄️</span>
+                    <span class="tree-item-name">${drawer.name || drawer.id}</span>
+                `;
+                drawerItem.onclick = (e) => {
+                    e.stopPropagation();
+                    selectEntity('drawer', drawer.id);
+                };
+                drawersDiv.appendChild(drawerItem);
+            });
+
+            cartContainer.appendChild(drawersDiv);
+        }
+
+        itemsDiv.appendChild(cartContainer);
+    });
+
+    div.appendChild(header);
+    div.appendChild(itemsDiv);
+
+    return div;
 }
 
 function createCategoryNode(category) {
