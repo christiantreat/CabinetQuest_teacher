@@ -552,71 +552,71 @@ function animateThreeScene() {
 
 // ===== 3D CART CREATION =====
 
-// Cart type definitions with specific dimensions and characteristics
+// Cart type definitions with specific dimensions and characteristics (dimensions in feet)
 const CART_TYPES = {
     crash: {
         name: 'Crash Cart (Code Cart)',
-        width: 2.42,   // 29 inches
-        height: 3.5,   // 42 inches
-        depth: 2.04,   // 24.5 inches
+        width: 2.0,   // 2 feet
+        height: 4.0,  // 4 feet
+        depth: 1.5,   // 1.5 feet
         color: '#F44336',
         drawers: 5,
-        drawerHeight: 0.5
+        drawerHeight: 0.75
     },
     airway: {
         name: 'Airway Cart',
-        width: 2.42,
-        height: 3.5,
-        depth: 2.04,
+        width: 2.0,
+        height: 4.0,
+        depth: 1.5,
         color: '#4CAF50',
         drawers: 4,
-        drawerHeight: 0.5
+        drawerHeight: 0.9
     },
     medication: {
         name: 'Medication Cart',
-        width: 2.42,
-        height: 3.0,   // 36 inches (shorter)
-        depth: 2.04,
+        width: 2.0,
+        height: 4.0,
+        depth: 1.5,
         color: '#FF9800',
         drawers: 3,
-        drawerHeight: 0.5
+        drawerHeight: 1.2
     },
     iv: {
         name: 'IV Cart',
-        width: 1.5,    // 18 inches (narrow base)
-        height: 5.0,   // 60 inches (tall pole)
+        width: 1.5,   // Narrow base for stability
+        height: 5.0,  // Tall for IV pole
         depth: 1.5,
         color: '#9C27B0',
-        drawers: 1,    // Small base drawer
+        drawers: 1,   // Small base drawer
         drawerHeight: 0.5,
         hasIVPole: true
     },
     procedure: {
         name: 'Procedure Table',
-        width: 4.0,    // 48 inches (wide surface)
-        height: 3.0,   // 36 inches
-        depth: 2.5,    // 30 inches
+        width: 4.0,   // Wide surface for procedures
+        height: 3.0,
+        depth: 2.5,
         color: '#757575',
-        drawers: 0,    // Flat surface, no drawers
+        drawers: 0,   // Flat surface, no drawers
         hasTopSurface: true
     },
     trauma: {
         name: 'Trauma Cart',
-        width: 2.42,
-        height: 3.5,
-        depth: 2.04,
+        width: 2.0,
+        height: 4.0,
+        depth: 1.5,
         color: '#E91E63',
         drawers: 4,
-        drawerHeight: 0.5
+        drawerHeight: 0.9
     },
     supply: {
         name: 'Supply Cart',
         width: 2.0,
-        height: 3.0,
-        depth: 1.75,
+        height: 4.0,
+        depth: 1.5,
         color: '#2196F3',
         drawers: 3,
-        drawerHeight: 0.5
+        drawerHeight: 1.2
     }
 };
 
@@ -699,9 +699,9 @@ function create3DCart(cartData) {
 
     // Get cart type definition or use defaults
     const cartType = cartData.type ? CART_TYPES[cartData.type] : null;
-    const width = cartType ? cartType.width : (cartData.width3D || 2.42);
-    const height = cartType ? cartType.height : (cartData.height3D || 3.5);
-    const depth = cartType ? cartType.depth : (cartData.depth3D || 2.04);
+    const width = cartType ? cartType.width : (cartData.width3D || 2.0);
+    const height = cartType ? cartType.height : (cartData.height3D || 4.0);
+    const depth = cartType ? cartType.depth : (cartData.depth3D || 1.5);
 
     // Cart body (main box)
     const bodyGeometry = new THREE.BoxGeometry(width, height, depth);
