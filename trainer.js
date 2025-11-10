@@ -17,8 +17,8 @@ let isPointerLocked = false;
 let controls = null;
 
 // Player state
-let playerPosition = new THREE.Vector3(0, 1.67, 12); // 5.5 ft eye height, starting at front
-let playerRotation = { yaw: 0, pitch: 0 };
+let playerPosition = new THREE.Vector3(0, 5.5, 12); // 5.5 ft eye height, starting at front
+let playerRotation = { yaw: Math.PI, pitch: 0 }; // Start facing the room (180 degrees)
 let playerVelocity = new THREE.Vector3();
 
 // Input state
@@ -880,7 +880,8 @@ function createWalls() {
     const wallMaterial = new THREE.MeshStandardMaterial({
         color: 0xe8e8e8,
         roughness: 0.9,
-        metalness: 0.1
+        metalness: 0.1,
+        side: THREE.DoubleSide // Render both sides to ensure visibility
     });
 
     const wallThickness = 0.5;
@@ -892,6 +893,7 @@ function createWalls() {
     );
     backWall.position.set(0, ROOM_HEIGHT / 2, -ROOM_DEPTH / 2);
     backWall.receiveShadow = true;
+    backWall.castShadow = true;
     scene.add(backWall);
 
     // Left wall
@@ -901,6 +903,7 @@ function createWalls() {
     );
     leftWall.position.set(-ROOM_WIDTH / 2, ROOM_HEIGHT / 2, 0);
     leftWall.receiveShadow = true;
+    leftWall.castShadow = true;
     scene.add(leftWall);
 
     // Right wall
@@ -910,6 +913,7 @@ function createWalls() {
     );
     rightWall.position.set(ROOM_WIDTH / 2, ROOM_HEIGHT / 2, 0);
     rightWall.receiveShadow = true;
+    rightWall.castShadow = true;
     scene.add(rightWall);
 }
 
@@ -1017,20 +1021,25 @@ function create3DCart(cartData) {
         }
     }
 
-    // Drawers (if applicable)
-    if (cartType && cartType.drawers > 0) {
-        const numDrawers = cartType.drawers;
-        const drawerHeight = cartType.drawerHeight;
-        const drawerSpacing = (height - (numDrawers * drawerHeight)) / (numDrawers + 1);
+    // Drawers (get actual drawers from CONFIG, not from cart type)
+    const cartDrawers = CONFIG.drawers.filter(d => d.cart === cartData.id);
+    if (cartDrawers.length > 0) {
+        // Sort drawers by number (top to bottom)
+        cartDrawers.sort((a, b) => a.number - b.number);
 
-        for (let i = 0; i < numDrawers; i++) {
-            const drawerGroup = createDrawer(cartData, i + 1, width, drawerHeight, depth);
-            const yPos = drawerSpacing + (i * (drawerHeight + drawerSpacing)) + (drawerHeight / 2);
+        const drawerHeight = 0.5; // 6 inches in feet
+        const drawerSpacing = 0.05; // Small gap between drawers
+        const totalDrawerHeight = cartDrawers.length * (drawerHeight + drawerSpacing);
+        const startY = (height / 2) - (totalDrawerHeight / 2); // Start from top
+
+        cartDrawers.forEach((drawer, index) => {
+            const drawerGroup = createDrawer(cartData, drawer.number, width, drawerHeight, depth);
+            const yPos = startY + index * (drawerHeight + drawerSpacing) + (drawerHeight / 2);
             drawerGroup.position.y = yPos;
             drawerGroup.userData.closedZ = 0;
             drawerGroup.userData.openZ = depth * 0.4;
             cartGroup.add(drawerGroup);
-        }
+        });
     }
 
     // Position cart in room
@@ -1334,7 +1343,7 @@ function updatePlayerMovement(deltaTime) {
     playerPosition.z = Math.max(-ROOM_DEPTH / 2 + 0.5, Math.min(ROOM_DEPTH / 2 - 0.5, playerPosition.z));
 
     // Keep at eye height
-    playerPosition.y = 1.67; // 5.5 feet
+    playerPosition.y = 5.5; // 5.5 feet eye height
 }
 
 // Advanced collision detection with carts
@@ -1649,9 +1658,9 @@ function startScenario(scenario) {
         itemsNeeded.appendChild(itemDiv);
     });
 
-    // Reset player position
-    playerPosition.set(0, 1.67, 12);
-    playerRotation.yaw = Math.PI;
+    // Reset player position (5.5 feet eye height, starting at front facing the room)
+    playerPosition.set(0, 5.5, 12);
+    playerRotation.yaw = Math.PI; // Face towards the room (180 degrees)
     playerRotation.pitch = 0;
 
     // Start timer
