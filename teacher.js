@@ -13,7 +13,7 @@ let CONFIG = {
         backgroundColor: '#fafafa',
         width: 30,  // feet
         depth: 25,  // feet
-        height: 10, // feet
+        height: 12, // feet
         pixelsPerFoot: 20 // Scale factor for canvas rendering
     },
     scoringRules: {

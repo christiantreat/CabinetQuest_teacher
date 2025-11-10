@@ -516,6 +516,118 @@
             font-size: 18px;
             color: #999;
         }
+
+        /* Drawer Items Popup */
+        .drawer-items-popup {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            border: 3px solid #0e639c;
+            border-radius: 15px;
+            padding: 25px;
+            min-width: 400px;
+            max-width: 600px;
+            max-height: 70vh;
+            overflow-y: auto;
+            display: none;
+            pointer-events: all;
+            z-index: 2000;
+            box-shadow: 0 10px 50px rgba(0, 0, 0, 0.8);
+        }
+
+        .drawer-items-popup.visible {
+            display: block;
+        }
+
+        .drawer-items-popup-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #0e639c;
+            margin-bottom: 20px;
+            text-align: center;
+            border-bottom: 2px solid #0e639c;
+            padding-bottom: 15px;
+        }
+
+        .drawer-items-list {
+            margin-bottom: 20px;
+        }
+
+        .drawer-item {
+            background: rgba(14, 99, 156, 0.2);
+            border: 2px solid #0e639c;
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin: 10px 0;
+            font-size: 16px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .drawer-item-icon {
+            font-size: 24px;
+        }
+
+        .drawer-item-name {
+            flex: 1;
+            font-weight: 500;
+        }
+
+        .drawer-item.essential {
+            border-color: #FFD700;
+            background: rgba(255, 215, 0, 0.15);
+        }
+
+        .drawer-item.essential::after {
+            content: '⭐';
+            font-size: 20px;
+        }
+
+        .drawer-items-empty {
+            text-align: center;
+            padding: 30px;
+            color: #999;
+            font-size: 16px;
+            font-style: italic;
+        }
+
+        .drawer-items-close-btn {
+            background: #0e639c;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s;
+        }
+
+        .drawer-items-close-btn:hover {
+            background: #1177bb;
+        }
+
+        @media (max-width: 768px) {
+            .drawer-items-popup {
+                min-width: 90%;
+                max-width: 90%;
+                padding: 20px;
+            }
+
+            .drawer-items-popup-title {
+                font-size: 20px;
+            }
+
+            .drawer-item {
+                padding: 12px 15px;
+                font-size: 14px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -629,6 +741,15 @@
             <div id="mobile-camera-menu-items">
                 <!-- Populated by JavaScript -->
             </div>
+        </div>
+
+        <!-- Drawer Items Popup -->
+        <div class="drawer-items-popup" id="drawer-items-popup">
+            <div class="drawer-items-popup-title" id="drawer-popup-title">Drawer Contents</div>
+            <div class="drawer-items-list" id="drawer-items-list">
+                <!-- Populated by JavaScript -->
+            </div>
+            <button class="drawer-items-close-btn" onclick="closeDrawerPopup()">Close</button>
         </div>
 
         <!-- Completion Screen -->
