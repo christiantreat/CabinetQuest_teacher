@@ -2547,6 +2547,11 @@ function updateDrawerProperty(prop, value) {
         });
 
         buildHierarchy();
+
+        // If cart, number, or name changed, rebuild 3D carts to show updated drawer
+        if (prop === 'cart' || prop === 'number' || prop === 'name') {
+            buildAll3DCarts();
+        }
     }
 }
 
@@ -2724,6 +2729,7 @@ function createNewDrawer() {
     buildHierarchy();
     updateStatusBar();
     selectEntity('drawer', id);
+    buildAll3DCarts(); // Rebuild 3D scene to show new drawer
     showAlert('New drawer created', 'success');
 }
 
