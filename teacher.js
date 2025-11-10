@@ -1561,6 +1561,21 @@ function updateRoomSize() {
     createFloor();
     createGrid();
 
+    // Update all cart positions to maintain origin at center with new room dimensions
+    CONFIG.carts.forEach(cart => {
+        const cart3D = cartMeshes.get(cart.id);
+        if (cart3D) {
+            // Recalculate position based on normalized coords and new room size
+            cart3D.position.x = (cart.x - 0.5) * widthFeet;
+            cart3D.position.z = (cart.y - 0.5) * depthFeet;
+        }
+    });
+
+    // Refresh inspector if a cart is selected to show updated position in feet
+    if (STATE.selectedId && STATE.selectedType === 'cart') {
+        updateInspector();
+    }
+
     showAlert(`Room size updated to ${widthFeet} × ${depthFeet} ft`, 'success');
 }
 
@@ -1975,6 +1990,24 @@ function updateInspector() {
 }
 
 function buildCartInspector(cart, container) {
+    // Get cart dimensions from CART_TYPES (in feet)
+    const cartType = CART_TYPES[cart.type] || CART_TYPES.crash;
+    const widthFeet = cartType.width;
+    const depthFeet = cartType.depth;
+    const heightFeet = cartType.height;
+
+    // Calculate position in feet from room center
+    const roomWidth = CONFIG.roomSettings.width;
+    const roomDepth = CONFIG.roomSettings.depth;
+    const posXFeet = ((cart.x - 0.5) * roomWidth).toFixed(2);
+    const posYFeet = ((cart.y - 0.5) * roomDepth).toFixed(2);
+
+    // Calculate min/max position bounds in feet
+    const minX = (-roomWidth / 2).toFixed(2);
+    const maxX = (roomWidth / 2).toFixed(2);
+    const minY = (-roomDepth / 2).toFixed(2);
+    const maxY = (roomDepth / 2).toFixed(2);
+
     container.innerHTML = `
         <div class="inspector-section">
             <div class="inspector-section-title">Cart Properties</div>
@@ -2013,16 +2046,16 @@ function buildCartInspector(cart, container) {
         </div>
 
         <div class="inspector-section">
-            <div class="inspector-section-title">Position</div>
+            <div class="inspector-section-title">Position (feet from center)</div>
 
             <div class="form-field-row">
                 <div class="form-field">
-                    <label>X Position</label>
-                    <input type="number" step="0.01" min="0" max="1" value="${cart.x}" onchange="updateCartProperty('x', parseFloat(this.value))">
+                    <label>X Position (ft)</label>
+                    <input type="number" step="0.1" min="${minX}" max="${maxX}" value="${posXFeet}" onchange="updateCartPositionFeet('x', parseFloat(this.value))">
                 </div>
                 <div class="form-field">
-                    <label>Y Position</label>
-                    <input type="number" step="0.01" min="0" max="1" value="${cart.y}" onchange="updateCartProperty('y', parseFloat(this.value))">
+                    <label>Y Position (ft)</label>
+                    <input type="number" step="0.1" min="${minY}" max="${maxY}" value="${posYFeet}" onchange="updateCartPositionFeet('y', parseFloat(this.value))">
                 </div>
             </div>
         </div>
@@ -2044,17 +2077,26 @@ function buildCartInspector(cart, container) {
         </div>
 
         <div class="inspector-section">
-            <div class="inspector-section-title">Dimensions</div>
+            <div class="inspector-section-title">Dimensions (feet)</div>
 
             <div class="form-field-row">
                 <div class="form-field">
-                    <label>Width (px)</label>
-                    <input type="number" min="40" max="200" value="${cart.width || 80}" onchange="updateCartProperty('width', parseInt(this.value))">
+                    <label>Width (ft)</label>
+                    <input type="number" value="${widthFeet}" readonly style="background-color: #f5f5f5; cursor: not-allowed;">
                 </div>
                 <div class="form-field">
-                    <label>Height (px)</label>
-                    <input type="number" min="40" max="200" value="${cart.height || 80}" onchange="updateCartProperty('height', parseInt(this.value))">
+                    <label>Depth (ft)</label>
+                    <input type="number" value="${depthFeet}" readonly style="background-color: #f5f5f5; cursor: not-allowed;">
                 </div>
+            </div>
+
+            <div class="form-field">
+                <label>Height (ft)</label>
+                <input type="number" value="${heightFeet}" readonly style="background-color: #f5f5f5; cursor: not-allowed;">
+            </div>
+
+            <div style="font-size: 11px; color: #666; margin-top: 5px; font-style: italic;">
+                * Dimensions are based on cart type
             </div>
         </div>
 
@@ -2457,8 +2499,8 @@ function updateCartProperty(prop, value) {
         if (prop === 'x' || prop === 'y') {
             const cart3D = cartMeshes.get(cart.id);
             if (cart3D) {
-                const roomWidth = 30;
-                const roomDepth = 25;
+                const roomWidth = CONFIG.roomSettings.width;
+                const roomDepth = CONFIG.roomSettings.depth;
                 cart3D.position.x = (cart.x - 0.5) * roomWidth;
                 cart3D.position.z = (cart.y - 0.5) * roomDepth;
             }
@@ -2472,6 +2514,29 @@ function updateCartProperty(prop, value) {
             }
             updateInspector(); // Refresh to show new value
         }
+    }
+}
+
+// Update cart position using feet-based coordinates (from room center)
+function updateCartPositionFeet(axis, valueFeet) {
+    const cart = getEntity('cart', STATE.selectedId);
+    if (cart) {
+        const roomWidth = CONFIG.roomSettings.width;
+        const roomDepth = CONFIG.roomSettings.depth;
+
+        // Convert feet-based position (from center) to normalized 0-1 coordinates
+        let normalizedValue;
+        if (axis === 'x') {
+            normalizedValue = (valueFeet / roomWidth) + 0.5;
+        } else if (axis === 'y') {
+            normalizedValue = (valueFeet / roomDepth) + 0.5;
+        }
+
+        // Clamp to valid range
+        normalizedValue = Math.max(0, Math.min(1, normalizedValue));
+
+        // Update using existing function
+        updateCartProperty(axis, normalizedValue);
     }
 }
 
