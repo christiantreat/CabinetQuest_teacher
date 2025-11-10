@@ -39,6 +39,8 @@ const ROOM_HEIGHT = 10; // feet
 
 // Configuration data
 let CONFIG = null;
+let currentCameraView = null; // Current active camera view
+let isFirstPersonMode = true; // Toggle between first-person and camera views
 
 // ============================================================================
 // SOUND EFFECTS SYSTEM
@@ -301,6 +303,219 @@ function toggleFPSCounter() {
         fpsCounter.style.display = isVisible ? 'none' : 'block';
         console.log(`FPS counter ${isVisible ? 'hidden' : 'shown'}`);
     }
+}
+
+// ============================================================================
+// CAMERA VIEW SYSTEM
+// ============================================================================
+
+function switchCameraView(viewId) {
+    if (!CONFIG || !CONFIG.cameraViews) return;
+
+    const view = CONFIG.cameraViews.find(v => v.id === viewId);
+    if (!view) return;
+
+    currentCameraView = view;
+    isFirstPersonMode = false;
+
+    // Apply camera view
+    playerPosition.set(view.position.x, view.position.y, view.position.z);
+    camera.fov = view.fov;
+    camera.updateProjectionMatrix();
+
+    // Look at target
+    const lookAt = new THREE.Vector3(view.lookAt.x, view.lookAt.y, view.lookAt.z);
+    const direction = lookAt.sub(playerPosition).normalize();
+
+    playerRotation.yaw = Math.atan2(direction.x, direction.z);
+    playerRotation.pitch = Math.asin(-direction.y);
+
+    console.log(`Switched to camera view: ${view.name}`);
+    showNotification(`Camera View: ${view.name}`);
+}
+
+function toggleFirstPersonMode() {
+    isFirstPersonMode = !isFirstPersonMode;
+
+    if (isFirstPersonMode) {
+        // Reset to first-person mode
+        currentCameraView = null;
+        camera.fov = 75;
+        camera.updateProjectionMatrix();
+        showNotification('First Person Mode');
+    } else if (CONFIG && CONFIG.cameraViews && CONFIG.cameraViews.length > 0) {
+        // Switch to first available camera view
+        switchCameraView(CONFIG.cameraViews[0].id);
+    }
+}
+
+function cycleCameraViews(direction = 1) {
+    if (!CONFIG || !CONFIG.cameraViews || CONFIG.cameraViews.length === 0) return;
+
+    if (isFirstPersonMode) {
+        // Switch from first-person to first camera view
+        switchCameraView(CONFIG.cameraViews[0].id);
+        return;
+    }
+
+    const currentIndex = CONFIG.cameraViews.findIndex(v => v.id === currentCameraView?.id);
+    let nextIndex = (currentIndex + direction + CONFIG.cameraViews.length) % CONFIG.cameraViews.length;
+
+    // If cycling back to start, go to first-person mode
+    if (direction > 0 && nextIndex === 0 && currentIndex === CONFIG.cameraViews.length - 1) {
+        toggleFirstPersonMode();
+        return;
+    }
+
+    switchCameraView(CONFIG.cameraViews[nextIndex].id);
+}
+
+function showNotification(message) {
+    const notification = document.createElement('div');
+    notification.style.position = 'absolute';
+
+    // Adjust position for mobile vs desktop
+    const isMobile = window.innerWidth <= 768;
+    notification.style.top = isMobile ? '80px' : '100px';
+    notification.style.left = '50%';
+    notification.style.transform = 'translateX(-50%)';
+    notification.style.background = 'rgba(0, 0, 0, 0.9)';
+    notification.style.color = 'white';
+    notification.style.padding = isMobile ? '12px 24px' : '10px 20px';
+    notification.style.borderRadius = '8px';
+    notification.style.fontSize = isMobile ? '16px' : '14px';
+    notification.style.fontWeight = 'bold';
+    notification.style.zIndex = '1000';
+    notification.style.border = '2px solid #0e639c';
+    notification.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.5)';
+    notification.style.maxWidth = isMobile ? '80%' : 'auto';
+    notification.style.textAlign = 'center';
+    notification.textContent = message;
+
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transition = 'opacity 0.5s';
+        setTimeout(() => notification.remove(), 500);
+    }, 2000);
+}
+
+// ============================================================================
+// MOBILE CAMERA CONTROLS
+// ============================================================================
+
+function mobileCycleCameraView() {
+    cycleCameraViews(1);
+}
+
+function buildMobileCameraMenu() {
+    const menuItems = document.getElementById('mobile-camera-menu-items');
+    if (!menuItems) return;
+
+    menuItems.innerHTML = '';
+
+    // First-person mode option
+    const firstPersonItem = document.createElement('div');
+    firstPersonItem.className = 'mobile-camera-menu-item';
+    if (isFirstPersonMode) firstPersonItem.classList.add('active');
+    firstPersonItem.textContent = '🎮 First Person';
+    firstPersonItem.onclick = () => {
+        if (!isFirstPersonMode) toggleFirstPersonMode();
+        closeMobileCameraMenu();
+    };
+    menuItems.appendChild(firstPersonItem);
+
+    // Camera view options
+    if (CONFIG && CONFIG.cameraViews) {
+        CONFIG.cameraViews.forEach(view => {
+            const item = document.createElement('div');
+            item.className = 'mobile-camera-menu-item';
+            if (!isFirstPersonMode && currentCameraView?.id === view.id) {
+                item.classList.add('active');
+            }
+            item.textContent = `📷 ${view.name}`;
+            item.onclick = () => {
+                switchCameraView(view.id);
+                closeMobileCameraMenu();
+                updateMobileCameraMenu();
+            };
+            menuItems.appendChild(item);
+        });
+    }
+}
+
+function toggleMobileCameraMenu() {
+    const menu = document.getElementById('mobile-camera-menu');
+    if (menu) {
+        menu.classList.toggle('visible');
+        if (menu.classList.contains('visible')) {
+            buildMobileCameraMenu();
+        }
+    }
+}
+
+function closeMobileCameraMenu() {
+    const menu = document.getElementById('mobile-camera-menu');
+    if (menu) {
+        menu.classList.remove('visible');
+    }
+}
+
+function updateMobileCameraMenu() {
+    const menu = document.getElementById('mobile-camera-menu');
+    if (menu && menu.classList.contains('visible')) {
+        buildMobileCameraMenu();
+    }
+}
+
+// Long press to open camera menu, quick tap to cycle
+let cameraBtnPressTimer = null;
+let cameraBtnPressStartTime = 0;
+
+function setupMobileCameraButton() {
+    const btn = document.getElementById('mobile-camera-cycle');
+    if (!btn) return;
+
+    // Touch events
+    btn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        cameraBtnPressStartTime = Date.now();
+        cameraBtnPressTimer = setTimeout(() => {
+            toggleMobileCameraMenu();
+        }, 500); // Long press = 500ms
+    });
+
+    btn.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        const pressDuration = Date.now() - cameraBtnPressStartTime;
+        clearTimeout(cameraBtnPressTimer);
+
+        if (pressDuration < 500) {
+            // Quick tap - cycle camera
+            closeMobileCameraMenu();
+            mobileCycleCameraView();
+        }
+    });
+
+    btn.addEventListener('touchcancel', (e) => {
+        e.preventDefault();
+        clearTimeout(cameraBtnPressTimer);
+    });
+}
+
+// Close menu when tapping outside
+function setupMobileCameraMenuClose() {
+    document.addEventListener('touchstart', (e) => {
+        const menu = document.getElementById('mobile-camera-menu');
+        const btn = document.getElementById('mobile-camera-cycle');
+
+        if (menu && menu.classList.contains('visible')) {
+            if (!menu.contains(e.target) && !btn.contains(e.target)) {
+                closeMobileCameraMenu();
+            }
+        }
+    });
 }
 
 // ============================================================================
@@ -688,6 +903,18 @@ function onKeyDown(event) {
         interactWithDrawer(lookingAtDrawer);
     }
 
+    // Camera view switching
+    if (key === 'c') {
+        event.preventDefault();
+        cycleCameraViews(1);
+    }
+
+    // Toggle first-person / camera view mode
+    if (key === 'v') {
+        event.preventDefault();
+        toggleFirstPersonMode();
+    }
+
     // Debug - FPS counter toggle
     if (key === 'f3') {
         event.preventDefault();
@@ -713,6 +940,9 @@ function onKeyUp(event) {
 
 function onMouseMove(event) {
     if (!isPointerLocked) return;
+
+    // Only allow mouse look in first-person mode
+    if (!isFirstPersonMode) return;
 
     // Update player rotation based on mouse movement
     playerRotation.yaw -= event.movementX * mouseSensitivity;
@@ -765,6 +995,9 @@ function animate() {
 }
 
 function updatePlayerMovement(deltaTime) {
+    // Only allow movement in first-person mode
+    if (!isFirstPersonMode) return;
+
     // Calculate movement direction based on camera facing
     const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
     forward.y = 0; // Keep on horizontal plane
@@ -1227,6 +1460,11 @@ function init() {
 
     // Setup input
     setupInputHandlers();
+
+    // Setup mobile camera controls
+    setupMobileCameraButton();
+    setupMobileCameraMenuClose();
+
     updateLoadingProgress('Ready!', 100);
 
     // Fade out loading screen smoothly
