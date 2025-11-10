@@ -32,13 +32,13 @@ const raycaster = new THREE.Raycaster();
 raycaster.far = 3; // Only detect things within 3 feet
 let lookingAtDrawer = null;
 
-// Room dimensions (matching designer)
-const ROOM_WIDTH = 30;  // feet
-const ROOM_DEPTH = 25;  // feet
-const ROOM_HEIGHT = 10; // feet
-
 // Configuration data
 let CONFIG = null;
+
+// Room dimensions - will be set from CONFIG after loading
+let ROOM_WIDTH = 30;  // feet (default, overridden by CONFIG)
+let ROOM_DEPTH = 25;  // feet (default, overridden by CONFIG)
+let ROOM_HEIGHT = 10; // feet (default, overridden by CONFIG)
 let currentCameraView = null; // Current active camera view
 let isFirstPersonMode = true; // Toggle between first-person and camera views
 
@@ -772,6 +772,14 @@ function loadConfiguration() {
         console.error('Error loading configuration:', error);
         CONFIG = getDefaultConfig();
     }
+
+    // Update room dimensions from CONFIG
+    if (CONFIG.roomSettings) {
+        ROOM_WIDTH = CONFIG.roomSettings.width || 30;
+        ROOM_DEPTH = CONFIG.roomSettings.depth || 25;
+        ROOM_HEIGHT = CONFIG.roomSettings.height || 10;
+        console.log(`✓ Room dimensions set to ${ROOM_WIDTH} × ${ROOM_DEPTH} × ${ROOM_HEIGHT} ft`);
+    }
 }
 
 function getDefaultConfig() {
@@ -789,7 +797,14 @@ function getDefaultConfig() {
             { id: 'drawer5', name: 'Med Drawer 2', cart: 'cart2', number: 2 },
             { id: 'drawer6', name: 'Med Drawer 3', cart: 'cart2', number: 3 }
         ],
-        items: []
+        items: [],
+        roomSettings: {
+            backgroundColor: '#fafafa',
+            width: 30,
+            depth: 25,
+            height: 10,
+            pixelsPerFoot: 20
+        }
     };
 }
 
