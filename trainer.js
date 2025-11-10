@@ -917,15 +917,15 @@ function createWalls() {
     scene.add(rightWall);
 }
 
-// Cart type definitions (matching teacher.js)
+// Cart type definitions (matching teacher.js) - dimensions in feet
 const CART_TYPES = {
-    crash: { name: 'Crash Cart', width: 2.42, height: 3.5, depth: 2.04, drawers: 5, drawerHeight: 0.5 },
-    airway: { name: 'Airway Cart', width: 2.42, height: 3.5, depth: 2.04, drawers: 4, drawerHeight: 0.65 },
-    medication: { name: 'Medication Cart', width: 2.42, height: 3.0, depth: 2.04, drawers: 3, drawerHeight: 0.75 },
-    trauma: { name: 'Trauma Cart', width: 2.42, height: 3.5, depth: 2.04, drawers: 4, drawerHeight: 0.65 },
+    crash: { name: 'Crash Cart', width: 2.0, height: 4.0, depth: 1.5, drawers: 5, drawerHeight: 0.75 },
+    airway: { name: 'Airway Cart', width: 2.0, height: 4.0, depth: 1.5, drawers: 4, drawerHeight: 0.9 },
+    medication: { name: 'Medication Cart', width: 2.0, height: 4.0, depth: 1.5, drawers: 3, drawerHeight: 1.2 },
+    trauma: { name: 'Trauma Cart', width: 2.0, height: 4.0, depth: 1.5, drawers: 4, drawerHeight: 0.9 },
     iv: { name: 'IV Cart', width: 1.5, height: 5.0, depth: 1.5, drawers: 1, drawerHeight: 0.5, hasIVPole: true },
     procedure: { name: 'Procedure Table', width: 4.0, height: 3.0, depth: 2.5, drawers: 0 },
-    supply: { name: 'Supply Cart', width: 2.0, height: 3.5, depth: 1.75, drawers: 5, drawerHeight: 0.5 }
+    supply: { name: 'Supply Cart', width: 2.0, height: 4.0, depth: 1.5, drawers: 5, drawerHeight: 0.75 }
 };
 
 // Create 3D cart from configuration data
@@ -935,9 +935,9 @@ function create3DCart(cartData) {
     cartGroup.userData.type = 'cart';
 
     const cartType = cartData.type ? CART_TYPES[cartData.type] : null;
-    const width = cartType ? cartType.width : 2.42;
-    const height = cartType ? cartType.height : 3.5;
-    const depth = cartType ? cartType.depth : 2.04;
+    const width = cartType ? cartType.width : 2.0;
+    const height = cartType ? cartType.height : 4.0;
+    const depth = cartType ? cartType.depth : 1.5;
     const color = cartData.color || '#999999';
 
     // Cart body
