@@ -376,6 +376,35 @@ function create3DCart(cartData) {
     wireframe.position.copy(body.position);
     cartGroup.add(wireframe);
 
+    // Add wheels (4 wheels at corners)
+    const wheelRadius = 0.12; // 1.5 inches radius
+    const wheelWidth = 0.08;  // Wheel thickness
+    const wheelGeometry = new THREE.CylinderGeometry(wheelRadius, wheelRadius, wheelWidth, 16);
+    const wheelMaterial = new THREE.MeshStandardMaterial({
+        color: 0x222222, // Dark gray/black
+        roughness: 0.8,
+        metalness: 0.2
+    });
+
+    // Position wheels at corners (slightly inset)
+    const wheelInset = 0.2; // Inset from edges
+    const wheelPositions = [
+        { x: -(width/2 - wheelInset), z: -(depth/2 - wheelInset) }, // Back left
+        { x: (width/2 - wheelInset), z: -(depth/2 - wheelInset) },  // Back right
+        { x: -(width/2 - wheelInset), z: (depth/2 - wheelInset) },  // Front left
+        { x: (width/2 - wheelInset), z: (depth/2 - wheelInset) }    // Front right
+    ];
+
+    wheelPositions.forEach(pos => {
+        const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+        wheel.rotation.x = Math.PI / 2; // Rotate to be vertical
+        wheel.position.x = pos.x;
+        wheel.position.y = wheelRadius; // At ground level
+        wheel.position.z = pos.z;
+        wheel.castShadow = true;
+        cartGroup.add(wheel);
+    });
+
     // Add special features based on cart type
     if (cartType && cartType.hasIVPole) {
         // IV pole (tall cylinder at back)
@@ -2296,6 +2325,55 @@ function loadDefaultConfiguration() {
             description: 'Multiple trauma patient with suspected internal bleeding.',
             essential: ['gauze', 'tourniquet', 'chest-tube', 'iv-start'],
             optional: ['cervical-collar', 'splint', 'scalpel']
+        },
+        {
+            id: 's4',
+            name: 'Respiratory Distress',
+            description: 'Patient in severe respiratory distress, prepare for potential intubation.',
+            essential: ['oxygen', 'bvm', 'laryngoscope', 'ett'],
+            optional: ['suction', 'oropharyngeal', 'epinephrine']
+        },
+        {
+            id: 's5',
+            name: 'Anaphylaxis Emergency',
+            description: 'Severe allergic reaction with airway compromise and hypotension.',
+            essential: ['epinephrine', 'iv-start', 'oxygen', 'bvm'],
+            optional: ['saline', 'atropine', 'defibrillator']
+        },
+        {
+            id: 's6',
+            name: 'Overdose Response',
+            description: 'Patient with suspected opioid overdose, unconscious and not breathing.',
+            essential: ['naloxone', 'bvm', 'oxygen', 'iv-start'],
+            optional: ['suction', 'saline', 'ecg']
+        },
+        {
+            id: 's7',
+            name: 'Chest Pain - MI',
+            description: 'Patient presenting with severe chest pain, suspected myocardial infarction.',
+            essential: ['ecg', 'iv-start', 'oxygen', 'morphine'],
+            optional: ['epinephrine', 'amiodarone', 'defibrillator']
+        },
+        {
+            id: 's8',
+            name: 'Hemorrhage Control',
+            description: 'Major external bleeding from trauma, life-threatening hemorrhage.',
+            essential: ['tourniquet', 'gauze', 'iv-start', 'saline'],
+            optional: ['splint', 'cervical-collar', 'morphine']
+        },
+        {
+            id: 's9',
+            name: 'Pediatric Emergency',
+            description: 'Child in respiratory failure, prepare pediatric equipment.',
+            essential: ['bvm', 'oxygen', 'ett', 'laryngoscope'],
+            optional: ['epinephrine', 'iv-start', 'suction']
+        },
+        {
+            id: 's10',
+            name: 'Stroke Alert',
+            description: 'Patient with acute stroke symptoms, time-critical intervention needed.',
+            essential: ['iv-start', 'ecg', 'oxygen', 'saline'],
+            optional: ['morphine', 'gauze', 'atropine']
         }
     ];
 
