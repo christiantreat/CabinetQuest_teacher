@@ -331,6 +331,7 @@ function switchCameraView(viewId) {
     playerRotation.pitch = Math.asin(-direction.y);
 
     console.log(`Switched to camera view: ${view.name}`);
+    logCameraState(`AFTER SWITCHING TO: ${view.name}`);
     showNotification(`Camera View: ${view.name}`);
 }
 
@@ -342,6 +343,8 @@ function toggleFirstPersonMode() {
         currentCameraView = null;
         camera.fov = 75;
         camera.updateProjectionMatrix();
+        console.log('Toggled to First Person Mode');
+        logCameraState('AFTER TOGGLING TO FIRST-PERSON');
         showNotification('First Person Mode');
     } else if (CONFIG && CONFIG.cameraViews && CONFIG.cameraViews.length > 0) {
         // Switch to first available camera view
@@ -780,6 +783,21 @@ function loadConfiguration() {
         ROOM_HEIGHT = CONFIG.roomSettings.height || 10;
         console.log(`✓ Room dimensions set to ${ROOM_WIDTH} × ${ROOM_DEPTH} × ${ROOM_HEIGHT} ft`);
     }
+
+    // Log camera view presets
+    console.log('=== CAMERA VIEW PRESETS ===');
+    if (CONFIG.cameraViews && CONFIG.cameraViews.length > 0) {
+        console.log(`Found ${CONFIG.cameraViews.length} camera view(s):`);
+        CONFIG.cameraViews.forEach((view, index) => {
+            console.log(`  ${index + 1}. ${view.name} (${view.id})`);
+            console.log(`     Position: (${view.position.x.toFixed(2)}, ${view.position.y.toFixed(2)}, ${view.position.z.toFixed(2)}) ft`);
+            console.log(`     Look At: (${view.lookAt.x.toFixed(2)}, ${view.lookAt.y.toFixed(2)}, ${view.lookAt.z.toFixed(2)}) ft`);
+            console.log(`     FOV: ${view.fov}°, Type: ${view.type}`);
+        });
+    } else {
+        console.log('No camera view presets configured');
+    }
+    console.log('===========================');
 }
 
 function getDefaultConfig() {
@@ -1734,6 +1752,41 @@ function changeQuality(quality) {
     updateQualityUI();
 }
 
+// Helper function to log current camera state
+function logCameraState(context = '') {
+    console.log(`=== CAMERA STATE ${context} ===`);
+    console.log(`Mode: ${isFirstPersonMode ? 'First-Person' : 'Custom View'}`);
+    console.log(`Position: (${playerPosition.x.toFixed(2)}, ${playerPosition.y.toFixed(2)}, ${playerPosition.z.toFixed(2)}) ft`);
+    console.log(`Rotation - Yaw: ${(playerRotation.yaw * 180 / Math.PI).toFixed(2)}° (${playerRotation.yaw.toFixed(4)} rad)`);
+    console.log(`         Pitch: ${(playerRotation.pitch * 180 / Math.PI).toFixed(2)}° (${playerRotation.pitch.toFixed(4)} rad)`);
+
+    // Calculate direction vector from yaw and pitch
+    const direction = new THREE.Vector3(
+        Math.sin(playerRotation.yaw) * Math.cos(playerRotation.pitch),
+        -Math.sin(playerRotation.pitch),
+        Math.cos(playerRotation.yaw) * Math.cos(playerRotation.pitch)
+    );
+    console.log(`Direction Vector: (${direction.x.toFixed(4)}, ${direction.y.toFixed(4)}, ${direction.z.toFixed(4)})`);
+
+    // Human-readable direction
+    let facing = '';
+    const yawDeg = playerRotation.yaw * 180 / Math.PI;
+    if (yawDeg >= -45 && yawDeg < 45) facing = 'South (into room)';
+    else if (yawDeg >= 45 && yawDeg < 135) facing = 'West';
+    else if (yawDeg >= 135 || yawDeg < -135) facing = 'North (toward entrance)';
+    else facing = 'East';
+    console.log(`Facing: ${facing}`);
+
+    if (camera) {
+        console.log(`Camera FOV: ${camera.fov}°`);
+    }
+
+    if (!isFirstPersonMode && CONFIG.cameraViews && CONFIG.cameraViews.length > 0) {
+        console.log(`Available custom views: ${CONFIG.cameraViews.map(v => v.name).join(', ')}`);
+    }
+    console.log('=========================');
+}
+
 function startScenario(scenario) {
     console.log(`Starting scenario: ${scenario.name}`);
 
@@ -1762,6 +1815,9 @@ function startScenario(scenario) {
     playerPosition.set(0, 5.5, 12);
     playerRotation.yaw = 0; // Face forward into the room
     playerRotation.pitch = 0;
+
+    // Log camera state at scenario start
+    logCameraState('AT SCENARIO START');
 
     // Start timer
     startTime = Date.now();
