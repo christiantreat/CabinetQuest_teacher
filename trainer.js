@@ -18,7 +18,7 @@ let controls = null;
 
 // Player state
 let playerPosition = new THREE.Vector3(0, 5.5, 12); // 5.5 ft eye height, starting at front
-let playerRotation = { yaw: Math.PI, pitch: 0 }; // Start facing the room (180 degrees)
+let playerRotation = { yaw: 0, pitch: 0 }; // Start facing forward into the room
 let playerVelocity = new THREE.Vector3();
 
 // Input state
@@ -38,7 +38,7 @@ let CONFIG = null;
 // Room dimensions - will be set from CONFIG after loading
 let ROOM_WIDTH = 30;  // feet (default, overridden by CONFIG)
 let ROOM_DEPTH = 25;  // feet (default, overridden by CONFIG)
-let ROOM_HEIGHT = 10; // feet (default, overridden by CONFIG)
+let ROOM_HEIGHT = 12; // feet (default, overridden by CONFIG)
 let currentCameraView = null; // Current active camera view
 let isFirstPersonMode = true; // Toggle between first-person and camera views
 
@@ -802,7 +802,7 @@ function getDefaultConfig() {
             backgroundColor: '#fafafa',
             width: 30,
             depth: 25,
-            height: 10,
+            height: 12,
             pixelsPerFoot: 20
         }
     };
@@ -1094,18 +1094,60 @@ function createDrawer(cartData, drawerNumber, width, height, depth) {
     else if (cartData.type === 'trauma') drawerColor = '#FF9800';
     else if (cartData.type === 'iv') drawerColor = '#9C27B0';
 
-    // Drawer front face
-    const drawerGeometry = new THREE.BoxGeometry(width * 0.95, height, 0.08);
-    const drawerMaterial = new THREE.MeshStandardMaterial({
+    const drawerWidth = width * 0.95;
+    const drawerDepth = depth * 0.85; // Interior depth
+    const wallThickness = 0.04; // Thickness of drawer walls
+
+    // Materials
+    const frontMaterial = new THREE.MeshStandardMaterial({
         color: drawerColor,
         roughness: 0.7,
         metalness: 0.2
     });
-    const drawer = new THREE.Mesh(drawerGeometry, drawerMaterial);
-    drawer.position.z = depth / 2 - 0.04;
-    drawer.castShadow = true;
-    drawer.userData.interactable = true;
-    drawerGroup.add(drawer);
+    const interiorMaterial = new THREE.MeshStandardMaterial({
+        color: 0xcccccc, // Light gray interior
+        roughness: 0.8,
+        metalness: 0.1,
+        side: THREE.DoubleSide
+    });
+
+    // Drawer front face
+    const frontGeometry = new THREE.BoxGeometry(drawerWidth, height, wallThickness);
+    const front = new THREE.Mesh(frontGeometry, frontMaterial);
+    front.position.z = depth / 2 - wallThickness / 2;
+    front.castShadow = true;
+    front.userData.interactable = true;
+    drawerGroup.add(front);
+
+    // Drawer bottom
+    const bottomGeometry = new THREE.BoxGeometry(drawerWidth - wallThickness * 2, wallThickness, drawerDepth);
+    const bottom = new THREE.Mesh(bottomGeometry, interiorMaterial);
+    bottom.position.y = -height / 2 + wallThickness / 2;
+    bottom.position.z = (depth / 2 - drawerDepth / 2) - wallThickness;
+    bottom.receiveShadow = true;
+    drawerGroup.add(bottom);
+
+    // Drawer left side
+    const sideGeometry = new THREE.BoxGeometry(wallThickness, height - wallThickness, drawerDepth);
+    const leftSide = new THREE.Mesh(sideGeometry, interiorMaterial);
+    leftSide.position.x = -drawerWidth / 2 + wallThickness / 2;
+    leftSide.position.z = (depth / 2 - drawerDepth / 2) - wallThickness;
+    leftSide.castShadow = true;
+    drawerGroup.add(leftSide);
+
+    // Drawer right side
+    const rightSide = new THREE.Mesh(sideGeometry, interiorMaterial);
+    rightSide.position.x = drawerWidth / 2 - wallThickness / 2;
+    rightSide.position.z = (depth / 2 - drawerDepth / 2) - wallThickness;
+    rightSide.castShadow = true;
+    drawerGroup.add(rightSide);
+
+    // Drawer back
+    const backGeometry = new THREE.BoxGeometry(drawerWidth - wallThickness * 2, height - wallThickness, wallThickness);
+    const back = new THREE.Mesh(backGeometry, interiorMaterial);
+    back.position.z = depth / 2 - drawerDepth - wallThickness / 2;
+    back.castShadow = true;
+    drawerGroup.add(back);
 
     // Drawer handle
     const handleGeometry = new THREE.CylinderGeometry(0.02, 0.02, width * 0.4, 12);
@@ -1189,6 +1231,14 @@ function onKeyDown(event) {
     // Interaction
     if (key === 'e' && lookingAtDrawer) {
         interactWithDrawer(lookingAtDrawer);
+    }
+
+    // Close drawer popup with ESC
+    const drawerPopup = document.getElementById('drawer-items-popup');
+    if (key === 'escape' && drawerPopup && drawerPopup.classList.contains('visible')) {
+        event.preventDefault();
+        closeDrawerPopup();
+        return;
     }
 
     // Camera view switching
@@ -1457,10 +1507,8 @@ function interactWithDrawer(drawerMesh) {
     if (!drawerGroup.userData.isOpen) {
         openDrawer(drawerGroup);
 
-        // Check if this drawer contains needed items
-        if (currentScenario) {
-            checkForItems(drawerId, drawerName);
-        }
+        // Show popup with drawer contents
+        showDrawerItemsPopup(drawerId, drawerName);
     } else {
         closeDrawer(drawerGroup);
     }
@@ -1508,30 +1556,67 @@ function animateDrawer(drawerGroup, targetZ) {
     animate();
 }
 
-function checkForItems(drawerId, drawerName) {
-    if (!currentScenario) return;
+function showDrawerItemsPopup(drawerId, drawerName) {
+    // Find all items in this drawer from CONFIG (not just scenario items)
+    const allItemsInDrawer = CONFIG.items.filter(item => item.drawer === drawerId);
 
-    // Find items in this drawer
-    const itemsInDrawer = currentScenario.items.filter(item => {
-        const itemData = CONFIG.items.find(i => i.id === item.itemId);
-        return itemData && itemData.drawer === drawerId;
-    });
+    // Check which items are needed in current scenario (if any)
+    const neededItemIds = currentScenario ? currentScenario.items.map(i => i.itemId) : [];
+    const essentialItemIds = currentScenario ?
+        currentScenario.items.filter(i => i.essential).map(i => i.itemId) : [];
 
-    if (itemsInDrawer.length > 0) {
-        itemsInDrawer.forEach(scenarioItem => {
-            if (!foundItems.has(scenarioItem.itemId)) {
-                foundItems.add(scenarioItem.itemId);
-                console.log(`✓ Found item: ${scenarioItem.name}`);
-                updateProgress();
+    // Populate popup
+    const popup = document.getElementById('drawer-items-popup');
+    const titleEl = document.getElementById('drawer-popup-title');
+    const listEl = document.getElementById('drawer-items-list');
+
+    titleEl.textContent = drawerName || 'Drawer Contents';
+    listEl.innerHTML = '';
+
+    if (allItemsInDrawer.length === 0) {
+        listEl.innerHTML = '<div class="drawer-items-empty">This drawer is empty</div>';
+    } else {
+        allItemsInDrawer.forEach(item => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'drawer-item';
+
+            // Check if this item is essential for the current scenario
+            if (essentialItemIds.includes(item.id)) {
+                itemDiv.classList.add('essential');
+            }
+
+            itemDiv.innerHTML = `
+                <div class="drawer-item-icon">📦</div>
+                <div class="drawer-item-name">${item.name}</div>
+            `;
+            listEl.appendChild(itemDiv);
+
+            // Mark items as found if they're needed in the scenario
+            if (neededItemIds.includes(item.id) && !foundItems.has(item.id)) {
+                foundItems.add(item.id);
+                console.log(`✓ Found item: ${item.name}`);
 
                 // Sound effect
                 playSound('itemFound');
-
-                // Visual feedback
-                showItemFoundNotification(scenarioItem.name);
             }
         });
+
+        // Update progress after all items are marked
+        if (currentScenario) {
+            updateProgress();
+        }
     }
+
+    // Show popup
+    popup.classList.add('visible');
+
+    // Play drawer open sound
+    playSound('drawerOpen');
+}
+
+function closeDrawerPopup() {
+    const popup = document.getElementById('drawer-items-popup');
+    popup.classList.remove('visible');
 }
 
 // ============================================================================
@@ -1675,7 +1760,7 @@ function startScenario(scenario) {
 
     // Reset player position (5.5 feet eye height, starting at front facing the room)
     playerPosition.set(0, 5.5, 12);
-    playerRotation.yaw = Math.PI; // Face towards the room (180 degrees)
+    playerRotation.yaw = 0; // Face forward into the room
     playerRotation.pitch = 0;
 
     // Start timer
