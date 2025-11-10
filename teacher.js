@@ -179,6 +179,46 @@ function applyAction(action) {
                 buildHierarchy();
             }
             break;
+
+        case 'UPDATE_DRAWER_PROPERTY':
+            const updatedDrawer = CONFIG.drawers.find(d => d.id === action.data.drawerId);
+            if (updatedDrawer) {
+                updatedDrawer[action.data.property] = action.data.newValue;
+                buildHierarchy();
+            }
+            break;
+
+        case 'UPDATE_ITEM_PROPERTY':
+            const updatedItem = CONFIG.items.find(i => i.id === action.data.itemId);
+            if (updatedItem) {
+                updatedItem[action.data.property] = action.data.newValue;
+                buildHierarchy();
+            }
+            break;
+
+        case 'UPDATE_SCENARIO_PROPERTY':
+            const updatedScenario = CONFIG.scenarios.find(s => s.id === action.data.scenarioId);
+            if (updatedScenario) {
+                updatedScenario[action.data.property] = action.data.newValue;
+                buildHierarchy();
+            }
+            break;
+
+        case 'UPDATE_ACHIEVEMENT_PROPERTY':
+            const updatedAchievement = CONFIG.achievements.find(a => a.id === action.data.achievementId);
+            if (updatedAchievement) {
+                updatedAchievement[action.data.property] = action.data.newValue;
+                buildHierarchy();
+            }
+            break;
+
+        case 'UPDATE_CAMERAVIEW_PROPERTY':
+            const updatedView = CONFIG.cameraViews.find(v => v.id === action.data.viewId);
+            if (updatedView) {
+                updatedView[action.data.property] = action.data.newValue;
+                buildHierarchy();
+            }
+            break;
     }
 }
 
@@ -257,6 +297,46 @@ function applyReverseAction(action) {
         case 'DELETE_ITEM':
             CONFIG.items.push(action.data.item);
             buildHierarchy();
+            break;
+
+        case 'UPDATE_DRAWER_PROPERTY':
+            const updatedDrawer = CONFIG.drawers.find(d => d.id === action.data.drawerId);
+            if (updatedDrawer) {
+                updatedDrawer[action.data.property] = action.data.oldValue;
+                buildHierarchy();
+            }
+            break;
+
+        case 'UPDATE_ITEM_PROPERTY':
+            const updatedItem = CONFIG.items.find(i => i.id === action.data.itemId);
+            if (updatedItem) {
+                updatedItem[action.data.property] = action.data.oldValue;
+                buildHierarchy();
+            }
+            break;
+
+        case 'UPDATE_SCENARIO_PROPERTY':
+            const updatedScenario = CONFIG.scenarios.find(s => s.id === action.data.scenarioId);
+            if (updatedScenario) {
+                updatedScenario[action.data.property] = action.data.oldValue;
+                buildHierarchy();
+            }
+            break;
+
+        case 'UPDATE_ACHIEVEMENT_PROPERTY':
+            const updatedAchievement = CONFIG.achievements.find(a => a.id === action.data.achievementId);
+            if (updatedAchievement) {
+                updatedAchievement[action.data.property] = action.data.oldValue;
+                buildHierarchy();
+            }
+            break;
+
+        case 'UPDATE_CAMERAVIEW_PROPERTY':
+            const updatedView = CONFIG.cameraViews.find(v => v.id === action.data.viewId);
+            if (updatedView) {
+                updatedView[action.data.property] = action.data.oldValue;
+                buildHierarchy();
+            }
             break;
     }
 }
@@ -1464,15 +1544,19 @@ function toggleCameraView() {
             controls.enabled = true;
         }
 
-        if (savedCameraPosition) {
-            const targetLookAt = new THREE.Vector3(0, 0, 0);
-            animateCameraTo(savedCameraPosition, targetLookAt, () => {
-                camera.rotation.copy(savedCameraRotation);
-                cameraViewMode = 'orbital';
-                document.getElementById('toggle-camera-view').textContent = '📷 Top View';
-                showAlert('3D orbital view activated', 'success');
-            });
-        }
+        // Use saved position or default orbital position
+        const targetPosition = savedCameraPosition || new THREE.Vector3(15, 10, 15);
+        const targetRotation = savedCameraRotation;
+        const targetLookAt = new THREE.Vector3(0, 0, 0);
+
+        animateCameraTo(targetPosition, targetLookAt, () => {
+            if (targetRotation) {
+                camera.rotation.copy(targetRotation);
+            }
+            cameraViewMode = 'orbital';
+            document.getElementById('toggle-camera-view').textContent = '📷 Top View';
+            showAlert('3D orbital view activated', 'success');
+        });
     }
 }
 
@@ -1564,13 +1648,16 @@ function createCategoryNode(category) {
     const div = document.createElement('div');
     div.className = 'tree-category';
 
+    // Ensure items array exists
+    const items = category.items || [];
+
     const header = document.createElement('div');
     header.className = 'tree-category-header';
     header.innerHTML = `
         <span class="tree-category-icon">▼</span>
         <span class="tree-item-icon">${category.icon}</span>
         <span class="tree-item-name">${category.name}</span>
-        <span class="tree-item-count">${category.items.length}</span>
+        <span class="tree-item-count">${items.length}</span>
     `;
     header.onclick = () => {
         div.classList.toggle('collapsed');
@@ -1589,7 +1676,7 @@ function createCategoryNode(category) {
     itemsDiv.appendChild(createBtn);
 
     // Add items
-    category.items.forEach(item => {
+    items.forEach(item => {
         const itemDiv = document.createElement('div');
         itemDiv.className = 'tree-item';
         if (STATE.selectedType === category.id.slice(0, -1) && STATE.selectedId === item.id) {
@@ -2160,8 +2247,18 @@ function buildItemMultiselect(selectedIds, type) {
 function updateCartProperty(prop, value) {
     const cart = getEntity('cart', STATE.selectedId);
     if (cart) {
+        const oldValue = cart[prop];
         cart[prop] = value;
         STATE.unsavedChanges = true;
+
+        // Record action for undo/redo
+        recordAction('UPDATE_CART_PROPERTY', {
+            cartId: cart.id,
+            property: prop,
+            oldValue: oldValue,
+            newValue: value
+        });
+
         buildHierarchy();
         drawCanvas();
 
@@ -2201,8 +2298,18 @@ function updateCartProperty(prop, value) {
 function updateScenarioProperty(prop, value) {
     const scenario = getEntity('scenario', STATE.selectedId);
     if (scenario) {
+        const oldValue = scenario[prop];
         scenario[prop] = value;
         STATE.unsavedChanges = true;
+
+        // Record action for undo/redo
+        recordAction('UPDATE_SCENARIO_PROPERTY', {
+            scenarioId: scenario.id,
+            property: prop,
+            oldValue: oldValue,
+            newValue: value
+        });
+
         buildHierarchy();
     }
 }
@@ -2210,8 +2317,18 @@ function updateScenarioProperty(prop, value) {
 function updateCameraViewProperty(prop, value) {
     const view = getEntity('cameraview', STATE.selectedId);
     if (view) {
+        const oldValue = view[prop];
         view[prop] = value;
         STATE.unsavedChanges = true;
+
+        // Record action for undo/redo
+        recordAction('UPDATE_CAMERAVIEW_PROPERTY', {
+            viewId: view.id,
+            property: prop,
+            oldValue: oldValue,
+            newValue: value
+        });
+
         buildHierarchy();
     }
 }
@@ -2284,8 +2401,18 @@ function previewCameraView() {
 function updateDrawerProperty(prop, value) {
     const drawer = getEntity('drawer', STATE.selectedId);
     if (drawer) {
+        const oldValue = drawer[prop];
         drawer[prop] = value;
         STATE.unsavedChanges = true;
+
+        // Record action for undo/redo
+        recordAction('UPDATE_DRAWER_PROPERTY', {
+            drawerId: drawer.id,
+            property: prop,
+            oldValue: oldValue,
+            newValue: value
+        });
+
         buildHierarchy();
     }
 }
@@ -2293,8 +2420,18 @@ function updateDrawerProperty(prop, value) {
 function updateItemProperty(prop, value) {
     const item = getEntity('item', STATE.selectedId);
     if (item) {
+        const oldValue = item[prop];
         item[prop] = value;
         STATE.unsavedChanges = true;
+
+        // Record action for undo/redo
+        recordAction('UPDATE_ITEM_PROPERTY', {
+            itemId: item.id,
+            property: prop,
+            oldValue: oldValue,
+            newValue: value
+        });
+
         buildHierarchy();
     }
 }
@@ -2302,8 +2439,18 @@ function updateItemProperty(prop, value) {
 function updateAchievementProperty(prop, value) {
     const achievement = getEntity('achievement', STATE.selectedId);
     if (achievement) {
+        const oldValue = achievement[prop];
         achievement[prop] = value;
         STATE.unsavedChanges = true;
+
+        // Record action for undo/redo
+        recordAction('UPDATE_ACHIEVEMENT_PROPERTY', {
+            achievementId: achievement.id,
+            property: prop,
+            oldValue: oldValue,
+            newValue: value
+        });
+
         buildHierarchy();
     }
 }
@@ -2563,7 +2710,17 @@ function saveAll() {
 function loadConfiguration() {
     const saved = localStorage.getItem('traumaRoomConfig');
     if (saved) {
-        CONFIG = JSON.parse(saved);
+        const loadedConfig = JSON.parse(saved);
+        // Merge loaded config with default structure to ensure all properties exist
+        CONFIG.carts = loadedConfig.carts || [];
+        CONFIG.drawers = loadedConfig.drawers || [];
+        CONFIG.items = loadedConfig.items || [];
+        CONFIG.scenarios = loadedConfig.scenarios || [];
+        CONFIG.achievements = loadedConfig.achievements || [];
+        CONFIG.cameraViews = loadedConfig.cameraViews || [];
+        CONFIG.roomSettings = loadedConfig.roomSettings || CONFIG.roomSettings;
+        CONFIG.scoringRules = loadedConfig.scoringRules || CONFIG.scoringRules;
+        CONFIG.generalSettings = loadedConfig.generalSettings || CONFIG.generalSettings;
     } else {
         loadDefaultConfiguration();
     }
