@@ -276,6 +276,7 @@ function applyReverseAction(action) {
             if (drawerIndex !== -1) {
                 CONFIG.drawers.splice(drawerIndex, 1);
                 buildHierarchy();
+                drawCanvas();
                 buildAll3DCarts();
             }
             break;
@@ -283,6 +284,7 @@ function applyReverseAction(action) {
         case 'DELETE_DRAWER':
             CONFIG.drawers.push(action.data.drawer);
             buildHierarchy();
+            drawCanvas();
             buildAll3DCarts();
             break;
 
@@ -291,12 +293,16 @@ function applyReverseAction(action) {
             if (itemIndex !== -1) {
                 CONFIG.items.splice(itemIndex, 1);
                 buildHierarchy();
+                drawCanvas();
+                buildAll3DCarts();
             }
             break;
 
         case 'DELETE_ITEM':
             CONFIG.items.push(action.data.item);
             buildHierarchy();
+            drawCanvas();
+            buildAll3DCarts();
             break;
 
         case 'UPDATE_DRAWER_PROPERTY':
@@ -304,6 +310,8 @@ function applyReverseAction(action) {
             if (updatedDrawer) {
                 updatedDrawer[action.data.property] = action.data.oldValue;
                 buildHierarchy();
+                drawCanvas();
+                buildAll3DCarts();
             }
             break;
 
@@ -312,6 +320,8 @@ function applyReverseAction(action) {
             if (updatedItem) {
                 updatedItem[action.data.property] = action.data.oldValue;
                 buildHierarchy();
+                drawCanvas();
+                buildAll3DCarts();
             }
             break;
 
@@ -2547,6 +2557,7 @@ function updateDrawerProperty(prop, value) {
         });
 
         buildHierarchy();
+        drawCanvas(); // Update 2D room layout view
 
         // If cart, number, or name changed, rebuild 3D carts to show updated drawer
         if (prop === 'cart' || prop === 'number' || prop === 'name') {
@@ -2571,6 +2582,8 @@ function updateItemProperty(prop, value) {
         });
 
         buildHierarchy();
+        drawCanvas(); // Update 2D room layout view
+        buildAll3DCarts(); // Update 3D view
     }
 }
 
@@ -2725,10 +2738,15 @@ function createNewDrawer() {
     };
 
     CONFIG.drawers.push(newDrawer);
+
+    // Record for undo/redo
+    recordAction('CREATE_DRAWER', { drawer: newDrawer });
+
     STATE.unsavedChanges = true;
     buildHierarchy();
     updateStatusBar();
     selectEntity('drawer', id);
+    drawCanvas(); // Update 2D room layout view
     buildAll3DCarts(); // Rebuild 3D scene to show new drawer
     showAlert('New drawer created', 'success');
 }
@@ -2744,10 +2762,16 @@ function createNewItem() {
     };
 
     CONFIG.items.push(newItem);
+
+    // Record for undo/redo
+    recordAction('CREATE_ITEM', { item: newItem });
+
     STATE.unsavedChanges = true;
     buildHierarchy();
     updateStatusBar();
     selectEntity('item', id);
+    drawCanvas(); // Update 2D room layout view
+    buildAll3DCarts(); // Update 3D view
     showAlert('New item created', 'success');
 }
 
