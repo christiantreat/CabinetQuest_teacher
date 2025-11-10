@@ -327,7 +327,8 @@ function switchCameraView(viewId) {
     const lookAt = new THREE.Vector3(view.lookAt.x, view.lookAt.y, view.lookAt.z);
     const direction = lookAt.sub(playerPosition).normalize();
 
-    playerRotation.yaw = Math.atan2(direction.x, direction.z);
+    // Three.js cameras look down their local -Z axis, so we need to negate direction.z
+    playerRotation.yaw = Math.atan2(direction.x, -direction.z);
     playerRotation.pitch = Math.asin(-direction.y);
 
     console.log(`Switched to camera view: ${view.name}`);
@@ -1761,20 +1762,21 @@ function logCameraState(context = '') {
     console.log(`         Pitch: ${(playerRotation.pitch * 180 / Math.PI).toFixed(2)}° (${playerRotation.pitch.toFixed(4)} rad)`);
 
     // Calculate direction vector from yaw and pitch
+    // Note: Three.js cameras look down their local -Z axis
     const direction = new THREE.Vector3(
         Math.sin(playerRotation.yaw) * Math.cos(playerRotation.pitch),
         -Math.sin(playerRotation.pitch),
-        Math.cos(playerRotation.yaw) * Math.cos(playerRotation.pitch)
+        -Math.cos(playerRotation.yaw) * Math.cos(playerRotation.pitch)
     );
     console.log(`Direction Vector: (${direction.x.toFixed(4)}, ${direction.y.toFixed(4)}, ${direction.z.toFixed(4)})`);
 
     // Human-readable direction
     let facing = '';
     const yawDeg = playerRotation.yaw * 180 / Math.PI;
-    if (yawDeg >= -45 && yawDeg < 45) facing = 'South (into room)';
-    else if (yawDeg >= 45 && yawDeg < 135) facing = 'West';
-    else if (yawDeg >= 135 || yawDeg < -135) facing = 'North (toward entrance)';
-    else facing = 'East';
+    if (yawDeg >= -45 && yawDeg < 45) facing = 'South (into room, -Z)';
+    else if (yawDeg >= 45 && yawDeg < 135) facing = 'West (-X)';
+    else if (yawDeg >= 135 || yawDeg < -135) facing = 'North (toward entrance, +Z)';
+    else facing = 'East (+X)';
     console.log(`Facing: ${facing}`);
 
     if (camera) {
