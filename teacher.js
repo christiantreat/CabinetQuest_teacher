@@ -42,6 +42,263 @@ let STATE = {
     gridSize: 50
 };
 
+// ===== UNDO/REDO SYSTEM =====
+const HISTORY = {
+    undoStack: [],
+    redoStack: [],
+    maxHistorySize: 50,
+    isPerformingAction: false // Flag to prevent recording during undo/redo
+};
+
+// Record an action for undo/redo
+function recordAction(actionType, data) {
+    // Don't record if we're performing an undo/redo
+    if (HISTORY.isPerformingAction) return;
+
+    const action = {
+        type: actionType,
+        timestamp: Date.now(),
+        data: JSON.parse(JSON.stringify(data)) // Deep clone
+    };
+
+    HISTORY.undoStack.push(action);
+
+    // Limit history size
+    if (HISTORY.undoStack.length > HISTORY.maxHistorySize) {
+        HISTORY.undoStack.shift();
+    }
+
+    // Clear redo stack when new action is performed
+    HISTORY.redoStack = [];
+
+    updateUndoRedoButtons();
+    STATE.unsavedChanges = true;
+}
+
+// Undo the last action
+function undo() {
+    if (HISTORY.undoStack.length === 0) return;
+
+    HISTORY.isPerformingAction = true;
+
+    const action = HISTORY.undoStack.pop();
+    HISTORY.redoStack.push(action);
+
+    applyReverseAction(action);
+
+    HISTORY.isPerformingAction = false;
+    updateUndoRedoButtons();
+    STATE.unsavedChanges = true;
+}
+
+// Redo the last undone action
+function redo() {
+    if (HISTORY.redoStack.length === 0) return;
+
+    HISTORY.isPerformingAction = true;
+
+    const action = HISTORY.redoStack.pop();
+    HISTORY.undoStack.push(action);
+
+    applyAction(action);
+
+    HISTORY.isPerformingAction = false;
+    updateUndoRedoButtons();
+    STATE.unsavedChanges = true;
+}
+
+// Apply an action (for redo)
+function applyAction(action) {
+    switch (action.type) {
+        case 'CREATE_CART':
+            CONFIG.carts.push(action.data.cart);
+            buildHierarchy();
+            drawCanvas();
+            buildAll3DCarts();
+            break;
+
+        case 'DELETE_CART':
+            const cartIndex = CONFIG.carts.findIndex(c => c.id === action.data.cartId);
+            if (cartIndex !== -1) {
+                CONFIG.carts.splice(cartIndex, 1);
+                // Also delete related drawers
+                CONFIG.drawers = CONFIG.drawers.filter(d => d.cart !== action.data.cartId);
+                buildHierarchy();
+                drawCanvas();
+                buildAll3DCarts();
+            }
+            break;
+
+        case 'MOVE_CART':
+            const movedCart = CONFIG.carts.find(c => c.id === action.data.cartId);
+            if (movedCart) {
+                movedCart.x = action.data.newPosition.x;
+                movedCart.y = action.data.newPosition.y;
+                if (action.data.newPosition.rotation !== undefined) {
+                    movedCart.rotation = action.data.newPosition.rotation;
+                }
+                drawCanvas();
+                buildAll3DCarts();
+            }
+            break;
+
+        case 'UPDATE_CART_PROPERTY':
+            const updatedCart = CONFIG.carts.find(c => c.id === action.data.cartId);
+            if (updatedCart) {
+                updatedCart[action.data.property] = action.data.newValue;
+                buildHierarchy();
+                drawCanvas();
+                buildAll3DCarts();
+            }
+            break;
+
+        case 'CREATE_DRAWER':
+            CONFIG.drawers.push(action.data.drawer);
+            buildHierarchy();
+            buildAll3DCarts();
+            break;
+
+        case 'DELETE_DRAWER':
+            const drawerIndex = CONFIG.drawers.findIndex(d => d.id === action.data.drawerId);
+            if (drawerIndex !== -1) {
+                CONFIG.drawers.splice(drawerIndex, 1);
+                buildHierarchy();
+                buildAll3DCarts();
+            }
+            break;
+
+        case 'CREATE_ITEM':
+            CONFIG.items.push(action.data.item);
+            buildHierarchy();
+            break;
+
+        case 'DELETE_ITEM':
+            const itemIndex = CONFIG.items.findIndex(i => i.id === action.data.itemId);
+            if (itemIndex !== -1) {
+                CONFIG.items.splice(itemIndex, 1);
+                buildHierarchy();
+            }
+            break;
+    }
+}
+
+// Apply reverse of an action (for undo)
+function applyReverseAction(action) {
+    switch (action.type) {
+        case 'CREATE_CART':
+            const cartIndex = CONFIG.carts.findIndex(c => c.id === action.data.cart.id);
+            if (cartIndex !== -1) {
+                CONFIG.carts.splice(cartIndex, 1);
+                // Also delete related drawers
+                CONFIG.drawers = CONFIG.drawers.filter(d => d.cart !== action.data.cart.id);
+                buildHierarchy();
+                drawCanvas();
+                buildAll3DCarts();
+            }
+            break;
+
+        case 'DELETE_CART':
+            CONFIG.carts.push(action.data.cart);
+            // Restore drawers
+            if (action.data.drawers) {
+                CONFIG.drawers.push(...action.data.drawers);
+            }
+            buildHierarchy();
+            drawCanvas();
+            buildAll3DCarts();
+            break;
+
+        case 'MOVE_CART':
+            const movedCart = CONFIG.carts.find(c => c.id === action.data.cartId);
+            if (movedCart) {
+                movedCart.x = action.data.oldPosition.x;
+                movedCart.y = action.data.oldPosition.y;
+                if (action.data.oldPosition.rotation !== undefined) {
+                    movedCart.rotation = action.data.oldPosition.rotation;
+                }
+                drawCanvas();
+                buildAll3DCarts();
+            }
+            break;
+
+        case 'UPDATE_CART_PROPERTY':
+            const updatedCart = CONFIG.carts.find(c => c.id === action.data.cartId);
+            if (updatedCart) {
+                updatedCart[action.data.property] = action.data.oldValue;
+                buildHierarchy();
+                drawCanvas();
+                buildAll3DCarts();
+            }
+            break;
+
+        case 'CREATE_DRAWER':
+            const drawerIndex = CONFIG.drawers.findIndex(d => d.id === action.data.drawer.id);
+            if (drawerIndex !== -1) {
+                CONFIG.drawers.splice(drawerIndex, 1);
+                buildHierarchy();
+                buildAll3DCarts();
+            }
+            break;
+
+        case 'DELETE_DRAWER':
+            CONFIG.drawers.push(action.data.drawer);
+            buildHierarchy();
+            buildAll3DCarts();
+            break;
+
+        case 'CREATE_ITEM':
+            const itemIndex = CONFIG.items.findIndex(i => i.id === action.data.item.id);
+            if (itemIndex !== -1) {
+                CONFIG.items.splice(itemIndex, 1);
+                buildHierarchy();
+            }
+            break;
+
+        case 'DELETE_ITEM':
+            CONFIG.items.push(action.data.item);
+            buildHierarchy();
+            break;
+    }
+}
+
+// Update undo/redo button states
+function updateUndoRedoButtons() {
+    const undoBtn = document.getElementById('btn-undo');
+    const redoBtn = document.getElementById('btn-redo');
+
+    if (undoBtn) {
+        undoBtn.disabled = HISTORY.undoStack.length === 0;
+        undoBtn.title = HISTORY.undoStack.length > 0
+            ? `Undo (${HISTORY.undoStack.length} actions)`
+            : 'Nothing to undo';
+    }
+
+    if (redoBtn) {
+        redoBtn.disabled = HISTORY.redoStack.length === 0;
+        redoBtn.title = HISTORY.redoStack.length > 0
+            ? `Redo (${HISTORY.redoStack.length} actions)`
+            : 'Nothing to redo';
+    }
+}
+
+// Keyboard shortcuts for undo/redo
+function setupUndoRedoKeyboard() {
+    document.addEventListener('keydown', (e) => {
+        // Ctrl+Z or Cmd+Z for undo
+        if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+            e.preventDefault();
+            undo();
+        }
+        // Ctrl+Shift+Z or Ctrl+Y for redo
+        else if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+            e.preventDefault();
+            redo();
+        }
+    });
+
+    console.log('✓ Undo/Redo keyboard shortcuts enabled (Ctrl+Z, Ctrl+Y)');
+}
+
 // ===== CANVAS SETUP =====
 const canvas = document.getElementById('room-canvas');
 const ctx = canvas.getContext('2d');
@@ -376,6 +633,35 @@ function create3DCart(cartData) {
     wireframe.position.copy(body.position);
     cartGroup.add(wireframe);
 
+    // Add wheels (4 wheels at corners)
+    const wheelRadius = 0.12; // 1.5 inches radius
+    const wheelWidth = 0.08;  // Wheel thickness
+    const wheelGeometry = new THREE.CylinderGeometry(wheelRadius, wheelRadius, wheelWidth, 16);
+    const wheelMaterial = new THREE.MeshStandardMaterial({
+        color: 0x222222, // Dark gray/black
+        roughness: 0.8,
+        metalness: 0.2
+    });
+
+    // Position wheels at corners (slightly inset)
+    const wheelInset = 0.2; // Inset from edges
+    const wheelPositions = [
+        { x: -(width/2 - wheelInset), z: -(depth/2 - wheelInset) }, // Back left
+        { x: (width/2 - wheelInset), z: -(depth/2 - wheelInset) },  // Back right
+        { x: -(width/2 - wheelInset), z: (depth/2 - wheelInset) },  // Front left
+        { x: (width/2 - wheelInset), z: (depth/2 - wheelInset) }    // Front right
+    ];
+
+    wheelPositions.forEach(pos => {
+        const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+        wheel.rotation.x = Math.PI / 2; // Rotate to be vertical
+        wheel.position.x = pos.x;
+        wheel.position.y = wheelRadius; // At ground level
+        wheel.position.z = pos.z;
+        wheel.castShadow = true;
+        cartGroup.add(wheel);
+    });
+
     // Add special features based on cart type
     if (cartType && cartType.hasIVPole) {
         // IV pole (tall cylinder at back)
@@ -548,6 +834,16 @@ function onThreeMouseDown(event) {
             selectCart3D(cartId);
             selectedCart3D = cartMeshes.get(cartId);
 
+            // Store starting position for undo/redo
+            const cart = getEntity('cart', cartId);
+            if (cart) {
+                cartDragStartPosition = {
+                    x: cart.x,
+                    y: cart.y,
+                    rotation: cart.rotation
+                };
+            }
+
             // Also select in 2D system
             selectEntity('cart', cartId);
 
@@ -607,6 +903,31 @@ function onThreeMouseMove(event) {
 
 function onThreeMouseUp(event) {
     if (selectedCart3D) {
+        // Record cart movement for undo/redo
+        if (cartDragStartPosition) {
+            const cartId = selectedCart3D.userData.cartId;
+            const cart = getEntity('cart', cartId);
+            if (cart) {
+                const newPosition = {
+                    x: cart.x,
+                    y: cart.y,
+                    rotation: cart.rotation
+                };
+
+                // Only record if position actually changed
+                if (cartDragStartPosition.x !== newPosition.x ||
+                    cartDragStartPosition.y !== newPosition.y ||
+                    cartDragStartPosition.rotation !== newPosition.rotation) {
+                    recordAction('MOVE_CART', {
+                        cartId: cartId,
+                        oldPosition: cartDragStartPosition,
+                        newPosition: newPosition
+                    });
+                }
+            }
+            cartDragStartPosition = null;
+        }
+
         selectedCart3D = null;
         // Re-enable orbit controls
         if (controls && controls.enabled !== undefined) {
@@ -654,6 +975,7 @@ let selectionHelpers = {
     boundingBox: null,
     facingArrow: null
 };
+let cartDragStartPosition = null; // Store position before dragging for undo/redo
 
 function createSelectionHelpers(cartGroup) {
     // Remove old helpers
@@ -831,6 +1153,10 @@ function init() {
     buildAll3DCarts();
     animateThreeScene();
     console.log('✅ 3D scene ready!');
+
+    // Setup undo/redo system
+    setupUndoRedoKeyboard();
+    updateUndoRedoButtons();
 
     // Setup autosave
     setInterval(() => {
@@ -2048,6 +2374,10 @@ function createNewCart() {
     };
 
     CONFIG.carts.push(newCart);
+
+    // Record for undo/redo
+    recordAction('CREATE_CART', { cart: newCart });
+
     STATE.unsavedChanges = true;
     buildHierarchy();
     updateStatusBar();
@@ -2175,6 +2505,23 @@ function deleteCurrentEntity() {
     const collection = collections[STATE.selectedType];
     const index = collection.findIndex(e => e.id === STATE.selectedId);
     if (index > -1) {
+        const deletedEntity = collection[index];
+
+        // Record for undo/redo
+        if (STATE.selectedType === 'cart') {
+            // Also save drawers that belong to this cart
+            const cartDrawers = CONFIG.drawers.filter(d => d.cart === STATE.selectedId);
+            recordAction('DELETE_CART', {
+                cartId: STATE.selectedId,
+                cart: deletedEntity,
+                drawers: cartDrawers
+            });
+        } else if (STATE.selectedType === 'drawer') {
+            recordAction('DELETE_DRAWER', { drawerId: STATE.selectedId, drawer: deletedEntity });
+        } else if (STATE.selectedType === 'item') {
+            recordAction('DELETE_ITEM', { itemId: STATE.selectedId, item: deletedEntity });
+        }
+
         collection.splice(index, 1);
         STATE.unsavedChanges = true;
         deselectEntity();
@@ -2296,6 +2643,55 @@ function loadDefaultConfiguration() {
             description: 'Multiple trauma patient with suspected internal bleeding.',
             essential: ['gauze', 'tourniquet', 'chest-tube', 'iv-start'],
             optional: ['cervical-collar', 'splint', 'scalpel']
+        },
+        {
+            id: 's4',
+            name: 'Respiratory Distress',
+            description: 'Patient in severe respiratory distress, prepare for potential intubation.',
+            essential: ['oxygen', 'bvm', 'laryngoscope', 'ett'],
+            optional: ['suction', 'oropharyngeal', 'epinephrine']
+        },
+        {
+            id: 's5',
+            name: 'Anaphylaxis Emergency',
+            description: 'Severe allergic reaction with airway compromise and hypotension.',
+            essential: ['epinephrine', 'iv-start', 'oxygen', 'bvm'],
+            optional: ['saline', 'atropine', 'defibrillator']
+        },
+        {
+            id: 's6',
+            name: 'Overdose Response',
+            description: 'Patient with suspected opioid overdose, unconscious and not breathing.',
+            essential: ['naloxone', 'bvm', 'oxygen', 'iv-start'],
+            optional: ['suction', 'saline', 'ecg']
+        },
+        {
+            id: 's7',
+            name: 'Chest Pain - MI',
+            description: 'Patient presenting with severe chest pain, suspected myocardial infarction.',
+            essential: ['ecg', 'iv-start', 'oxygen', 'morphine'],
+            optional: ['epinephrine', 'amiodarone', 'defibrillator']
+        },
+        {
+            id: 's8',
+            name: 'Hemorrhage Control',
+            description: 'Major external bleeding from trauma, life-threatening hemorrhage.',
+            essential: ['tourniquet', 'gauze', 'iv-start', 'saline'],
+            optional: ['splint', 'cervical-collar', 'morphine']
+        },
+        {
+            id: 's9',
+            name: 'Pediatric Emergency',
+            description: 'Child in respiratory failure, prepare pediatric equipment.',
+            essential: ['bvm', 'oxygen', 'ett', 'laryngoscope'],
+            optional: ['epinephrine', 'iv-start', 'suction']
+        },
+        {
+            id: 's10',
+            name: 'Stroke Alert',
+            description: 'Patient with acute stroke symptoms, time-critical intervention needed.',
+            essential: ['iv-start', 'ecg', 'oxygen', 'saline'],
+            optional: ['morphine', 'gauze', 'atropine']
         }
     ];
 

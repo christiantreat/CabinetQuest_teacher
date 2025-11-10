@@ -519,6 +519,241 @@ function setupMobileCameraMenuClose() {
 }
 
 // ============================================================================
+// VIRTUAL JOYSTICK FOR MOBILE
+// ============================================================================
+
+class VirtualJoystick {
+    constructor(container) {
+        this.container = container;
+        this.base = null;
+        this.stick = null;
+        this.active = false;
+        this.direction = { x: 0, y: 0 };
+        this.touchId = null;
+
+        this.create();
+        this.setupEvents();
+    }
+
+    create() {
+        // Base circle
+        this.base = document.createElement('div');
+        this.base.style.cssText = `
+            position: absolute;
+            bottom: 120px;
+            left: 50px;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.15);
+            border: 3px solid rgba(255,255,255,0.4);
+            z-index: 1000;
+            pointer-events: auto;
+        `;
+        this.container.appendChild(this.base);
+
+        // Stick (inner circle)
+        this.stick = document.createElement('div');
+        this.stick.style.cssText = `
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.6);
+            top: 35px;
+            left: 35px;
+            transition: all 0.1s ease;
+            pointer-events: none;
+        `;
+        this.base.appendChild(this.stick);
+    }
+
+    setupEvents() {
+        this.base.addEventListener('touchstart', this.onTouchStart.bind(this), { passive: false });
+        document.addEventListener('touchmove', this.onTouchMove.bind(this), { passive: false });
+        document.addEventListener('touchend', this.onTouchEnd.bind(this));
+        document.addEventListener('touchcancel', this.onTouchEnd.bind(this));
+    }
+
+    onTouchStart(e) {
+        e.preventDefault();
+        if (this.touchId === null) {
+            this.touchId = e.touches[0].identifier;
+            this.active = true;
+        }
+    }
+
+    onTouchMove(e) {
+        if (!this.active || this.touchId === null) return;
+        e.preventDefault();
+
+        // Find our touch
+        let touch = null;
+        for (let i = 0; i < e.touches.length; i++) {
+            if (e.touches[i].identifier === this.touchId) {
+                touch = e.touches[i];
+                break;
+            }
+        }
+
+        if (!touch) return;
+
+        const rect = this.base.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+
+        const deltaX = touch.clientX - centerX;
+        const deltaY = touch.clientY - centerY;
+        const distance = Math.min(Math.sqrt(deltaX * deltaX + deltaY * deltaY), 50);
+        const angle = Math.atan2(deltaY, deltaX);
+
+        const stickX = Math.cos(angle) * distance;
+        const stickY = Math.sin(angle) * distance;
+
+        this.stick.style.transform = `translate(${stickX}px, ${stickY}px)`;
+
+        this.direction.x = stickX / 50;
+        this.direction.y = stickY / 50;
+    }
+
+    onTouchEnd(e) {
+        // Check if our touch ended
+        if (this.touchId !== null) {
+            let touchStillActive = false;
+            for (let i = 0; i < e.touches.length; i++) {
+                if (e.touches[i].identifier === this.touchId) {
+                    touchStillActive = true;
+                    break;
+                }
+            }
+
+            if (!touchStillActive) {
+                this.active = false;
+                this.touchId = null;
+                this.stick.style.transform = 'translate(0, 0)';
+                this.direction.x = 0;
+                this.direction.y = 0;
+            }
+        }
+    }
+
+    getDirection() {
+        return this.direction;
+    }
+
+    hide() {
+        if (this.base) this.base.style.display = 'none';
+    }
+
+    show() {
+        if (this.base) this.base.style.display = 'block';
+    }
+
+    destroy() {
+        if (this.base && this.base.parentElement) {
+            this.base.parentElement.removeChild(this.base);
+        }
+    }
+}
+
+let virtualJoystick = null;
+
+function initVirtualJoystick() {
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    if (isMobile) {
+        const container = document.getElementById('mobile-controls');
+        if (container) {
+            virtualJoystick = new VirtualJoystick(container);
+            console.log('✓ Virtual joystick initialized');
+        }
+    }
+}
+
+// ============================================================================
+// TOUCH-BASED LOOK CONTROLS FOR MOBILE
+// ============================================================================
+
+let touchLookState = {
+    active: false,
+    touchId: null,
+    startX: 0,
+    startY: 0
+};
+
+function initTouchLookControls() {
+    const canvas = document.getElementById('three-canvas');
+
+    canvas.addEventListener('touchstart', (e) => {
+        // Right side of screen for looking (ignore joystick area)
+        const touch = e.touches[0];
+        const screenWidth = window.innerWidth;
+
+        // Only activate if touch is on right 60% of screen
+        if (touch.clientX > screenWidth * 0.4) {
+            touchLookState.active = true;
+            touchLookState.touchId = touch.identifier;
+            touchLookState.startX = touch.clientX;
+            touchLookState.startY = touch.clientY;
+        }
+    }, { passive: true });
+
+    canvas.addEventListener('touchmove', (e) => {
+        if (!touchLookState.active) return;
+
+        // Find our touch
+        let touch = null;
+        for (let i = 0; i < e.touches.length; i++) {
+            if (e.touches[i].identifier === touchLookState.touchId) {
+                touch = e.touches[i];
+                break;
+            }
+        }
+
+        if (!touch) return;
+
+        const deltaX = touch.clientX - touchLookState.startX;
+        const deltaY = touch.clientY - touchLookState.startY;
+
+        // Update player rotation
+        playerRotation.yaw -= deltaX * mouseSensitivity * 2; // Double sensitivity for touch
+        playerRotation.pitch -= deltaY * mouseSensitivity * 2;
+
+        // Clamp pitch
+        playerRotation.pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, playerRotation.pitch));
+
+        // Update start position for next delta
+        touchLookState.startX = touch.clientX;
+        touchLookState.startY = touch.clientY;
+    }, { passive: true });
+
+    canvas.addEventListener('touchend', (e) => {
+        // Check if our touch ended
+        if (touchLookState.touchId !== null) {
+            let touchStillActive = false;
+            for (let i = 0; i < e.touches.length; i++) {
+                if (e.touches[i].identifier === touchLookState.touchId) {
+                    touchStillActive = true;
+                    break;
+                }
+            }
+
+            if (!touchStillActive) {
+                touchLookState.active = false;
+                touchLookState.touchId = null;
+            }
+        }
+    }, { passive: true });
+
+    canvas.addEventListener('touchcancel', () => {
+        touchLookState.active = false;
+        touchLookState.touchId = null;
+    }, { passive: true });
+
+    console.log('✓ Touch look controls initialized');
+}
+
+// ============================================================================
 // INITIALIZATION
 // ============================================================================
 
@@ -726,6 +961,35 @@ function create3DCart(cartData) {
     handle.position.y = height * 0.75;
     handle.position.z = depth / 2 + 0.05;
     cartGroup.add(handle);
+
+    // Add wheels (4 wheels at corners)
+    const wheelRadius = 0.12; // 1.5 inches radius
+    const wheelWidth = 0.08;  // Wheel thickness
+    const wheelGeometry = new THREE.CylinderGeometry(wheelRadius, wheelRadius, wheelWidth, 16);
+    const wheelMaterial = new THREE.MeshStandardMaterial({
+        color: 0x222222, // Dark gray/black
+        roughness: 0.8,
+        metalness: 0.2
+    });
+
+    // Position wheels at corners (slightly inset)
+    const wheelInset = 0.2; // Inset from edges
+    const wheelPositions = [
+        { x: -(width/2 - wheelInset), z: -(depth/2 - wheelInset) }, // Back left
+        { x: (width/2 - wheelInset), z: -(depth/2 - wheelInset) },  // Back right
+        { x: -(width/2 - wheelInset), z: (depth/2 - wheelInset) },  // Front left
+        { x: (width/2 - wheelInset), z: (depth/2 - wheelInset) }    // Front right
+    ];
+
+    wheelPositions.forEach(pos => {
+        const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+        wheel.rotation.x = Math.PI / 2; // Rotate to be vertical
+        wheel.position.x = pos.x;
+        wheel.position.y = wheelRadius; // At ground level
+        wheel.position.z = pos.z;
+        wheel.castShadow = true;
+        cartGroup.add(wheel);
+    });
 
     // IV Pole (if applicable)
     if (cartType && cartType.hasIVPole) {
@@ -994,6 +1258,9 @@ function animate() {
     renderer.render(scene, camera);
 }
 
+let footstepTimer = 0;
+const footstepInterval = 0.4; // Play footstep every 0.4 seconds when moving
+
 function updatePlayerMovement(deltaTime) {
     // Only allow movement in first-person mode
     if (!isFirstPersonMode) return;
@@ -1007,25 +1274,96 @@ function updatePlayerMovement(deltaTime) {
     right.y = 0;
     right.normalize();
 
-    // Calculate velocity
+    // Calculate velocity from keyboard OR virtual joystick
     const moveVec = new THREE.Vector3();
-    if (keys.w) moveVec.add(forward);
-    if (keys.s) moveVec.sub(forward);
-    if (keys.d) moveVec.add(right);
-    if (keys.a) moveVec.sub(right);
+    let isMoving = false;
+
+    // Keyboard input
+    if (keys.w) { moveVec.add(forward); isMoving = true; }
+    if (keys.s) { moveVec.sub(forward); isMoving = true; }
+    if (keys.d) { moveVec.add(right); isMoving = true; }
+    if (keys.a) { moveVec.sub(right); isMoving = true; }
+
+    // Virtual joystick input (mobile)
+    if (virtualJoystick) {
+        const joyDir = virtualJoystick.getDirection();
+        if (Math.abs(joyDir.x) > 0.1 || Math.abs(joyDir.y) > 0.1) {
+            // Forward/back from joystick Y
+            moveVec.add(forward.clone().multiplyScalar(-joyDir.y));
+            // Strafe left/right from joystick X
+            moveVec.add(right.clone().multiplyScalar(joyDir.x));
+            isMoving = true;
+        }
+    }
 
     if (moveVec.length() > 0) {
         moveVec.normalize();
         const speed = keys.shift ? moveSpeed * sprintMultiplier : moveSpeed;
-        playerPosition.add(moveVec.multiplyScalar(speed * deltaTime));
+        const movement = moveVec.multiplyScalar(speed * deltaTime);
+
+        // Apply movement
+        const newPosition = playerPosition.clone().add(movement);
+
+        // Advanced collision detection with carts
+        if (!checkCartCollision(newPosition)) {
+            playerPosition.copy(newPosition);
+        } else {
+            // Try sliding along obstacles
+            const slideX = new THREE.Vector3(movement.x, 0, 0);
+            const slideZ = new THREE.Vector3(0, 0, movement.z);
+
+            if (!checkCartCollision(playerPosition.clone().add(slideX))) {
+                playerPosition.add(slideX);
+            } else if (!checkCartCollision(playerPosition.clone().add(slideZ))) {
+                playerPosition.add(slideZ);
+            }
+        }
+
+        // Play footstep sounds
+        footstepTimer += deltaTime;
+        if (footstepTimer >= footstepInterval) {
+            playSound('footstep');
+            footstepTimer = 0;
+        }
+    } else {
+        footstepTimer = 0; // Reset when not moving
     }
 
-    // Collision detection (simple bounds check)
+    // Simple room boundary collision
     playerPosition.x = Math.max(-ROOM_WIDTH / 2 + 0.5, Math.min(ROOM_WIDTH / 2 - 0.5, playerPosition.x));
     playerPosition.z = Math.max(-ROOM_DEPTH / 2 + 0.5, Math.min(ROOM_DEPTH / 2 - 0.5, playerPosition.z));
 
     // Keep at eye height
     playerPosition.y = 1.67; // 5.5 feet
+}
+
+// Advanced collision detection with carts
+function checkCartCollision(position) {
+    const playerRadius = 0.4; // Player collision radius in feet
+
+    for (let [cartId, cartGroup] of cartMeshes) {
+        const cartPos = cartGroup.position;
+
+        // Get cart dimensions from first child (body mesh)
+        const body = cartGroup.children.find(c => c.geometry && c.geometry.parameters);
+        if (!body) continue;
+
+        const cartWidth = body.geometry.parameters.width || 2.42;
+        const cartDepth = body.geometry.parameters.depth || 2.04;
+
+        // Simple AABB collision (Axis-Aligned Bounding Box)
+        const cartHalfWidth = cartWidth / 2 + playerRadius;
+        const cartHalfDepth = cartDepth / 2 + playerRadius;
+
+        const dx = Math.abs(position.x - cartPos.x);
+        const dz = Math.abs(position.z - cartPos.z);
+
+        if (dx < cartHalfWidth && dz < cartHalfDepth) {
+            return true; // Collision detected
+        }
+    }
+
+    return false; // No collision
 }
 
 function updateCamera() {
@@ -1112,6 +1450,9 @@ function openDrawer(drawerGroup) {
 
     // Play sound effect
     playSound('drawerOpen');
+
+    // Haptic feedback
+    triggerHapticFeedback('light');
 }
 
 function closeDrawer(drawerGroup) {
@@ -1122,6 +1463,9 @@ function closeDrawer(drawerGroup) {
 
     // Play sound effect
     playSound('drawerClose');
+
+    // Haptic feedback
+    triggerHapticFeedback('light');
 }
 
 function animateDrawer(drawerGroup, targetZ) {
@@ -1317,6 +1661,15 @@ function startScenario(scenario) {
     // Update progress
     updateProgress();
 
+    // Start ambient hospital sound (looped)
+    if (soundEnabled && SOUNDS.ambient && SOUNDS.ambient.readyState >= 2) {
+        SOUNDS.ambient.loop = true;
+        SOUNDS.ambient.volume = 0.3; // Quieter for background
+        SOUNDS.ambient.play().catch(err => {
+            console.log('Could not play ambient sound');
+        });
+    }
+
     // Request pointer lock
     const canvas = document.getElementById('three-canvas');
     canvas.requestPointerLock();
@@ -1364,6 +1717,9 @@ function completeScenario() {
     // Play success sound
     playSound('scenarioComplete');
 
+    // Haptic feedback for completion
+    triggerHapticFeedback('heavy');
+
     // Stop timer
     if (timerInterval) clearInterval(timerInterval);
 
@@ -1378,8 +1734,17 @@ function completeScenario() {
     else if (elapsed < 120) score += 300;
     else if (elapsed < 180) score += 100;
 
+    // Check and unlock achievements
+    checkAchievements(currentScenario, elapsed);
+
     // Unlock pointer
     document.exitPointerLock();
+
+    // Stop ambient sound
+    if (SOUNDS.ambient) {
+        SOUNDS.ambient.pause();
+        SOUNDS.ambient.currentTime = 0;
+    }
 
     // Show completion screen
     document.getElementById('final-time').textContent = timeString;
@@ -1394,6 +1759,119 @@ function completeScenario() {
     document.getElementById('achievement-text').textContent = achievementText;
 
     document.getElementById('completion-screen').classList.add('visible');
+}
+
+// ============================================================================
+// ACHIEVEMENT SYSTEM
+// ============================================================================
+
+let unlockedAchievements = new Set();
+
+function loadUnlockedAchievements() {
+    try {
+        const saved = localStorage.getItem('traumaTrainerAchievements');
+        if (saved) {
+            unlockedAchievements = new Set(JSON.parse(saved));
+        }
+    } catch (error) {
+        console.warn('Could not load achievements');
+    }
+}
+
+function saveUnlockedAchievements() {
+    try {
+        localStorage.setItem('traumaTrainerAchievements', JSON.stringify([...unlockedAchievements]));
+    } catch (error) {
+        console.warn('Could not save achievements');
+    }
+}
+
+function unlockAchievement(achievementId, name, description) {
+    if (unlockedAchievements.has(achievementId)) {
+        return; // Already unlocked
+    }
+
+    unlockedAchievements.add(achievementId);
+    saveUnlockedAchievements();
+
+    // Show achievement notification
+    showAchievementNotification(name, description);
+}
+
+function showAchievementNotification(name, description) {
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: -400px;
+        width: 350px;
+        background: linear-gradient(135deg, #FFD700, #FFA500);
+        color: #000;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        z-index: 10001;
+        transition: right 0.5s ease-out;
+        border: 3px solid #fff;
+    `;
+    notification.innerHTML = `
+        <div style="font-size: 14px; font-weight: bold; margin-bottom: 5px; opacity: 0.8;">🏆 ACHIEVEMENT UNLOCKED</div>
+        <div style="font-size: 20px; font-weight: bold; margin-bottom: 8px;">${name}</div>
+        <div style="font-size: 14px; opacity: 0.9;">${description}</div>
+    `;
+
+    document.body.appendChild(notification);
+
+    // Slide in
+    setTimeout(() => {
+        notification.style.right = '20px';
+    }, 100);
+
+    // Slide out and remove
+    setTimeout(() => {
+        notification.style.right = '-400px';
+        setTimeout(() => notification.remove(), 500);
+    }, 4000);
+
+    // Haptic feedback
+    triggerHapticFeedback('heavy');
+
+    console.log(`🏆 Achievement unlocked: ${name}`);
+}
+
+function checkAchievements(scenario, timeElapsed) {
+    if (!CONFIG || !CONFIG.achievements) return;
+
+    // Speed achievements
+    if (timeElapsed < 60) {
+        unlockAchievement('speed_demon', 'Speed Demon', 'Complete a scenario in under 60 seconds');
+    } else if (timeElapsed < 120) {
+        unlockAchievement('quick_thinker', 'Quick Thinker', 'Complete a scenario in under 2 minutes');
+    }
+
+    // Perfect completion
+    if (foundItems.size === scenario.items.length) {
+        unlockAchievement('perfectionist', 'Perfectionist', 'Find all items in a scenario');
+    }
+
+    // Scenario-specific achievements
+    if (scenario.id === 'scenario1' && !unlockedAchievements.has('first_scenario')) {
+        unlockAchievement('first_scenario', 'Getting Started', 'Complete your first scenario');
+    }
+
+    // Check for achievements defined in CONFIG
+    CONFIG.achievements.forEach(achievement => {
+        // Check if this achievement should be unlocked based on custom conditions
+        if (achievement.condition && typeof achievement.condition === 'function') {
+            try {
+                if (achievement.condition({ scenario, timeElapsed, foundItems })) {
+                    unlockAchievement(achievement.id, achievement.name, achievement.description);
+                }
+            } catch (error) {
+                console.warn(`Achievement ${achievement.id} condition error:`, error);
+            }
+        }
+    });
 }
 
 // ============================================================================
@@ -1412,13 +1890,98 @@ function hideInteractPrompt() {
 }
 
 function showItemFoundNotification(itemName) {
-    // TODO: Add visual/audio feedback for finding items
     console.log(`✓ Found: ${itemName}`);
+
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: linear-gradient(135deg, #4CAF50, #45a049);
+        color: white;
+        padding: 30px 50px;
+        border-radius: 15px;
+        font-size: 24px;
+        font-weight: bold;
+        z-index: 10000;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        border: 3px solid #fff;
+        animation: itemFoundPulse 0.5s ease-out;
+        text-align: center;
+    `;
+    notification.innerHTML = `
+        <div style="font-size: 48px; margin-bottom: 10px;">✓</div>
+        <div>Found: ${itemName}</div>
+    `;
+
+    // Add animation keyframes if not already added
+    if (!document.getElementById('item-found-animations')) {
+        const style = document.createElement('style');
+        style.id = 'item-found-animations';
+        style.textContent = `
+            @keyframes itemFoundPulse {
+                0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+                50% { transform: translate(-50%, -50%) scale(1.1); }
+                100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            }
+            @keyframes itemFoundFadeOut {
+                0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+                100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    document.body.appendChild(notification);
+
+    // Trigger haptic feedback
+    triggerHapticFeedback('medium');
+
+    // Auto-remove after delay
+    setTimeout(() => {
+        notification.style.animation = 'itemFoundFadeOut 0.3s ease-in';
+        setTimeout(() => notification.remove(), 300);
+    }, 2000);
+}
+
+// ============================================================================
+// HAPTIC FEEDBACK
+// ============================================================================
+
+function triggerHapticFeedback(intensity = 'light') {
+    // Check if haptics are enabled
+    if (!CONFIG || !CONFIG.generalSettings || !CONFIG.generalSettings.enableHaptics) {
+        return;
+    }
+
+    // Check if device supports vibration
+    if (!navigator.vibrate) {
+        return;
+    }
+
+    // Vibration patterns based on intensity
+    const patterns = {
+        light: [10],          // Short tap
+        medium: [20, 50, 20], // Double tap
+        heavy: [50, 100, 50, 100, 50] // Triple tap
+    };
+
+    const pattern = patterns[intensity] || patterns.light;
+    navigator.vibrate(pattern);
 }
 
 function showMenu() {
     currentScenario = null;
     if (timerInterval) clearInterval(timerInterval);
+
+    // Stop ambient sound
+    if (SOUNDS.ambient) {
+        SOUNDS.ambient.pause();
+        SOUNDS.ambient.currentTime = 0;
+    }
+
     document.getElementById('completion-screen').classList.remove('visible');
     showScenarioMenu();
 }
@@ -1442,6 +2005,7 @@ function init() {
 
     // Load configuration
     loadConfiguration();
+    loadUnlockedAchievements();
     updateLoadingProgress('Building 3D scene...', 30);
 
     // Initialize 3D
@@ -1461,9 +2025,11 @@ function init() {
     // Setup input
     setupInputHandlers();
 
-    // Setup mobile camera controls
+    // Setup mobile controls
     setupMobileCameraButton();
     setupMobileCameraMenuClose();
+    initVirtualJoystick();
+    initTouchLookControls();
 
     updateLoadingProgress('Ready!', 100);
 
