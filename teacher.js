@@ -11,8 +11,10 @@ let CONFIG = {
     cameraViews: [], // Camera views for different room perspectives
     roomSettings: {
         backgroundColor: '#fafafa',
-        width: 800,
-        height: 600
+        width: 30,  // feet
+        depth: 25,  // feet
+        height: 10, // feet
+        pixelsPerFoot: 20 // Scale factor for canvas rendering
     },
     scoringRules: {
         essentialPoints: 60,
@@ -39,7 +41,7 @@ let STATE = {
     mousePos: {x: 0, y: 0},
     unsavedChanges: false,
     snapToGrid: true, // Default to snap to grid enabled
-    gridSize: 50
+    gridSize: 1.0 // feet (1 foot grid by default)
 };
 
 // ===== UNDO/REDO SYSTEM =====
@@ -449,9 +451,9 @@ function animateThree() {
 
 // ===== THREE.JS SCENE OBJECTS =====
 function createFloor() {
-    // Get room dimensions from config (will convert to feet later)
-    const roomWidth = 30; // feet
-    const roomDepth = 25; // feet
+    // Get room dimensions from config (in feet)
+    const roomWidth = CONFIG.roomSettings.width;
+    const roomDepth = CONFIG.roomSettings.depth;
 
     // Create floor geometry (large plane)
     const floorGeometry = new THREE.PlaneGeometry(roomWidth, roomDepth);
@@ -471,8 +473,8 @@ function createFloor() {
 }
 
 function createGrid() {
-    const roomWidth = 30; // feet
-    const roomDepth = 25; // feet
+    const roomWidth = CONFIG.roomSettings.width; // feet
+    const roomDepth = CONFIG.roomSettings.depth; // feet
     const gridSize = 1; // 1 foot grid
 
     floorGrid = new THREE.GridHelper(
@@ -484,7 +486,7 @@ function createGrid() {
     floorGrid.position.y = 0.01; // Slightly above floor to prevent z-fighting
     scene.add(floorGrid);
 
-    console.log('✓ Grid created');
+    console.log('✓ Grid created:', Math.max(roomWidth, roomDepth), 'ft');
 }
 
 function createLighting() {
@@ -816,9 +818,8 @@ function create3DCart(cartData) {
 
     // Position cart based on data
     // Convert normalized 0-1 coords to feet-based 3D coords
-    // Assuming room is 30ft x 25ft centered at origin
-    const roomWidth = 30;
-    const roomDepth = 25;
+    const roomWidth = CONFIG.roomSettings.width;
+    const roomDepth = CONFIG.roomSettings.depth;
     cartGroup.position.x = (cartData.x - 0.5) * roomWidth;
     cartGroup.position.z = (cartData.y - 0.5) * roomDepth;
     cartGroup.position.y = 0; // On floor
@@ -992,8 +993,8 @@ function onThreeMouseMove(event) {
         // Update 2D data
         const cart = getEntity('cart', selectedCart3D.userData.cartId);
         if (cart) {
-            const roomWidth = 30;
-            const roomDepth = 25;
+            const roomWidth = CONFIG.roomSettings.width;
+            const roomDepth = CONFIG.roomSettings.depth;
             cart.x = (selectedCart3D.position.x / roomWidth) + 0.5;
             cart.y = (selectedCart3D.position.z / roomDepth) + 0.5;
 
@@ -1236,12 +1237,12 @@ function init() {
     // Sync UI controls with loaded config
     document.getElementById('room-bg-color').value = CONFIG.roomSettings.backgroundColor;
     document.getElementById('room-width').value = CONFIG.roomSettings.width;
-    document.getElementById('room-height').value = CONFIG.roomSettings.height;
+    document.getElementById('room-height').value = CONFIG.roomSettings.depth;
     document.getElementById('grid-size').value = STATE.gridSize;
 
-    // Set canvas size from config
-    canvas.width = CONFIG.roomSettings.width;
-    canvas.height = CONFIG.roomSettings.height;
+    // Set canvas size based on room dimensions in feet and scale factor
+    canvas.width = CONFIG.roomSettings.width * CONFIG.roomSettings.pixelsPerFoot;
+    canvas.height = CONFIG.roomSettings.depth * CONFIG.roomSettings.pixelsPerFoot;
 
     drawCanvas();
 
@@ -1287,10 +1288,16 @@ function setupCanvas() {
     // Track mouse position
     canvas.addEventListener('mousemove', (e) => {
         const rect = canvas.getBoundingClientRect();
-        STATE.mousePos.x = ((e.clientX - rect.left) / canvas.width).toFixed(2);
-        STATE.mousePos.y = ((e.clientY - rect.top) / canvas.height).toFixed(2);
+        // Convert to normalized (0-1) coordinates
+        const normX = (e.clientX - rect.left) / canvas.width;
+        const normY = (e.clientY - rect.top) / canvas.height;
+        // Convert to feet coordinates (centered at room center)
+        const xFeet = ((normX - 0.5) * CONFIG.roomSettings.width).toFixed(1);
+        const yFeet = ((normY - 0.5) * CONFIG.roomSettings.depth).toFixed(1);
+        STATE.mousePos.x = xFeet;
+        STATE.mousePos.y = yFeet;
         document.getElementById('canvas-info-mouse').textContent =
-            `X: ${STATE.mousePos.x}, Y: ${STATE.mousePos.y}`;
+            `X: ${xFeet} ft, Y: ${yFeet} ft`;
     });
 }
 
@@ -1324,15 +1331,17 @@ function drawGrid() {
     ctx.strokeStyle = 'rgba(100, 100, 100, 0.2)';
     ctx.lineWidth = 1;
 
-    const gridSize = STATE.gridSize;
-    for (let x = 0; x <= canvas.width; x += gridSize) {
+    // Grid size is in feet, convert to pixels for drawing
+    const gridSizePixels = STATE.gridSize * CONFIG.roomSettings.pixelsPerFoot;
+
+    for (let x = 0; x <= canvas.width; x += gridSizePixels) {
         ctx.beginPath();
         ctx.moveTo(x, 0);
         ctx.lineTo(x, canvas.height);
         ctx.stroke();
     }
 
-    for (let y = 0; y <= canvas.height; y += gridSize) {
+    for (let y = 0; y <= canvas.height; y += gridSizePixels) {
         ctx.beginPath();
         ctx.moveTo(0, y);
         ctx.lineTo(canvas.width, y);
@@ -1343,26 +1352,31 @@ function drawGrid() {
 function drawCart(cart, isSelected) {
     const x = cart.x * canvas.width;
     const y = cart.y * canvas.height;
-    const width = (cart.width || 80);
-    const height = (cart.height || 80);
+
+    // Cart dimensions from 3D data (in feet), convert to pixels for display
+    const cartType = CART_TYPES[cart.type] || CART_TYPES.crash;
+    const widthFeet = cartType.width;
+    const depthFeet = cartType.depth;
+    const widthPixels = widthFeet * CONFIG.roomSettings.pixelsPerFoot;
+    const depthPixels = depthFeet * CONFIG.roomSettings.pixelsPerFoot;
 
     // Selection highlight
     if (isSelected) {
         ctx.fillStyle = 'rgba(14, 99, 156, 0.2)';
-        ctx.fillRect(x - width/2 - 5, y - height/2 - 5, width + 10, height + 10);
+        ctx.fillRect(x - widthPixels/2 - 5, y - depthPixels/2 - 5, widthPixels + 10, depthPixels + 10);
         ctx.strokeStyle = '#0e639c';
         ctx.lineWidth = 3;
-        ctx.strokeRect(x - width/2 - 5, y - height/2 - 5, width + 10, height + 10);
+        ctx.strokeRect(x - widthPixels/2 - 5, y - depthPixels/2 - 5, widthPixels + 10, depthPixels + 10);
     }
 
     // Cart body
     ctx.fillStyle = cart.color;
-    ctx.fillRect(x - width/2, y - height/2, width, height);
+    ctx.fillRect(x - widthPixels/2, y - depthPixels/2, widthPixels, depthPixels);
 
     // Cart border
     ctx.strokeStyle = 'rgba(0,0,0,0.3)';
     ctx.lineWidth = 2;
-    ctx.strokeRect(x - width/2, y - height/2, width, height);
+    ctx.strokeRect(x - widthPixels/2, y - depthPixels/2, widthPixels, depthPixels);
 
     // Cart label
     ctx.fillStyle = 'white';
@@ -1376,12 +1390,16 @@ function drawCart(cart, isSelected) {
     ctx.fillStyle = 'rgba(255,255,255,0.7)';
     ctx.fillText(cart.id, x, y + 15);
 
-    // Dimensions indicator
+    // Dimensions indicator (show in feet)
     if (isSelected) {
         ctx.font = '8px monospace';
         ctx.fillStyle = '#0e639c';
-        ctx.fillText(`${width}×${height}px`, x, y - height/2 - 10);
-        ctx.fillText(`(${cart.x.toFixed(2)}, ${cart.y.toFixed(2)})`, x, y + height/2 + 18);
+        ctx.fillText(`${widthFeet.toFixed(1)}×${depthFeet.toFixed(1)} ft`, x, y - depthPixels/2 - 10);
+
+        // Convert normalized coords to feet for display
+        const xFeet = ((cart.x - 0.5) * CONFIG.roomSettings.width).toFixed(1);
+        const yFeet = ((cart.y - 0.5) * CONFIG.roomSettings.depth).toFixed(1);
+        ctx.fillText(`(${xFeet}, ${yFeet}) ft`, x, y + depthPixels/2 + 18);
     }
 }
 
@@ -1452,8 +1470,10 @@ function handleCanvasMouseDown(e) {
 
     // Check if clicking on a cart
     for (let cart of CONFIG.carts) {
-        const size = 80 / canvas.width;
-        if (Math.abs(clickX - cart.x) < size/2 && Math.abs(clickY - cart.y) < size/2) {
+        const cartType = CART_TYPES[cart.type] || CART_TYPES.crash;
+        const sizeX = (cartType.width * CONFIG.roomSettings.pixelsPerFoot) / canvas.width;
+        const sizeY = (cartType.depth * CONFIG.roomSettings.pixelsPerFoot) / canvas.height;
+        if (Math.abs(clickX - cart.x) < sizeX/2 && Math.abs(clickY - cart.y) < sizeY/2) {
             STATE.draggedCart = cart;
             selectEntity('cart', cart.id);
             return;
@@ -1473,8 +1493,9 @@ function handleCanvasMouseMove(e) {
 
     // Snap to grid if enabled
     if (STATE.snapToGrid) {
-        const gridSizeX = STATE.gridSize / canvas.width;
-        const gridSizeY = STATE.gridSize / canvas.height;
+        // Grid size is in feet, convert to normalized coordinates
+        const gridSizeX = (STATE.gridSize * CONFIG.roomSettings.pixelsPerFoot) / canvas.width;
+        const gridSizeY = (STATE.gridSize * CONFIG.roomSettings.pixelsPerFoot) / canvas.height;
         newX = Math.round(newX / gridSizeX) * gridSizeX;
         newY = Math.round(newY / gridSizeY) * gridSizeY;
     }
@@ -1513,18 +1534,34 @@ function updateRoomBackground() {
 }
 
 function updateRoomSize() {
-    const width = parseInt(document.getElementById('room-width').value);
-    const height = parseInt(document.getElementById('room-height').value);
+    const widthFeet = parseInt(document.getElementById('room-width').value);
+    const depthFeet = parseInt(document.getElementById('room-height').value);
 
-    CONFIG.roomSettings.width = width;
-    CONFIG.roomSettings.height = height;
+    CONFIG.roomSettings.width = widthFeet;
+    CONFIG.roomSettings.depth = depthFeet;
 
-    canvas.width = width;
-    canvas.height = height;
+    // Update canvas size based on feet and scale factor
+    canvas.width = widthFeet * CONFIG.roomSettings.pixelsPerFoot;
+    canvas.height = depthFeet * CONFIG.roomSettings.pixelsPerFoot;
 
     STATE.unsavedChanges = true;
     drawCanvas();
-    showAlert('Room size updated', 'success');
+
+    // Rebuild 3D floor and grid with new dimensions
+    if (floor) {
+        scene.remove(floor);
+        floor.geometry.dispose();
+        floor.material.dispose();
+    }
+    if (floorGrid) {
+        scene.remove(floorGrid);
+        floorGrid.geometry.dispose();
+        floorGrid.material.dispose();
+    }
+    createFloor();
+    createGrid();
+
+    showAlert(`Room size updated to ${widthFeet} × ${depthFeet} ft`, 'success');
 }
 
 function updateSnapToGrid() {

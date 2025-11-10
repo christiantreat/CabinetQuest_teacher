@@ -827,17 +827,17 @@
                 <button class="canvas-mode-btn" id="mode-overview" onclick="setCanvasMode('overview')">📊 Overview</button>
                 <button class="canvas-mode-btn" id="toggle-camera-view" onclick="toggleCameraView()" style="margin-left: auto; margin-right: 10px;">📷 Top View</button>
                 <div class="canvas-controls">
-                    <label class="canvas-control-label">Room:</label>
-                    <input type="number" id="room-width" class="canvas-control-input" value="800" min="400" max="1600" onchange="updateRoomSize()" style="width: 60px;">
+                    <label class="canvas-control-label">Room (ft):</label>
+                    <input type="number" id="room-width" class="canvas-control-input" value="30" min="10" max="60" step="1" onchange="updateRoomSize()" style="width: 60px;">
                     <span class="canvas-control-label">×</span>
-                    <input type="number" id="room-height" class="canvas-control-input" value="600" min="300" max="1200" onchange="updateRoomSize()" style="width: 60px;">
+                    <input type="number" id="room-height" class="canvas-control-input" value="25" min="10" max="50" step="1" onchange="updateRoomSize()" style="width: 60px;">
                     <span style="width: 1px; height: 20px; background: #3e3e42; margin: 0 8px;"></span>
                     <label class="canvas-control-label">Background:</label>
                     <input type="color" id="room-bg-color" class="canvas-control-input" value="#fafafa" onchange="updateRoomBackground()">
                     <span style="width: 1px; height: 20px; background: #3e3e42; margin: 0 8px;"></span>
-                    <label class="canvas-control-label">Grid:</label>
+                    <label class="canvas-control-label">Grid (ft):</label>
                     <input type="checkbox" id="show-grid" onchange="drawCanvas()" checked>
-                    <input type="number" id="grid-size" class="canvas-control-input" value="50" min="10" max="100" step="10" style="width: 50px;">
+                    <input type="number" id="grid-size" class="canvas-control-input" value="1.0" min="0.25" max="5.0" step="0.25" style="width: 50px;">
                     <label class="canvas-control-label">Snap:</label>
                     <input type="checkbox" id="snap-to-grid" onchange="updateSnapToGrid()" checked>
                 </div>
