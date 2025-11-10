@@ -215,6 +215,29 @@
             color: #999;
         }
 
+        .tree-item-container {
+            position: relative;
+        }
+
+        .tree-item-container.collapsed .tree-nested-items {
+            display: none;
+        }
+
+        .tree-item-container.collapsed .tree-category-icon {
+            transform: rotate(-90deg);
+        }
+
+        .tree-nested-items {
+            margin-left: 20px;
+            border-left: 1px solid #3e3e42;
+            padding-left: 4px;
+        }
+
+        .tree-nested-item {
+            padding: 4px 8px;
+            font-size: 11px;
+        }
+
         /* Center - Canvas Area */
         .canvas-panel {
             background: #1e1e1e;
@@ -814,9 +837,9 @@
                     <span style="width: 1px; height: 20px; background: #3e3e42; margin: 0 8px;"></span>
                     <label class="canvas-control-label">Grid:</label>
                     <input type="checkbox" id="show-grid" onchange="drawCanvas()" checked>
-                    <input type="number" id="grid-size" class="canvas-control-input" value="50" min="10" max="100" step="10" onchange="drawCanvas()" style="width: 50px;">
+                    <input type="number" id="grid-size" class="canvas-control-input" value="50" min="10" max="100" step="10" style="width: 50px;">
                     <label class="canvas-control-label">Snap:</label>
-                    <input type="checkbox" id="snap-to-grid" onchange="updateSnapToGrid()">
+                    <input type="checkbox" id="snap-to-grid" onchange="updateSnapToGrid()" checked>
                 </div>
             </div>
             <div class="canvas-container">
