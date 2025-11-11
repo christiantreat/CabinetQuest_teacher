@@ -1101,7 +1101,9 @@ function create3DCart(cartData) {
             });
             const interiorBack = new THREE.Mesh(interiorBackGeometry, interiorBackMaterial);
             interiorBack.position.y = yPos;
-            interiorBack.position.z = -depth * 0.45; // Positioned at back of cabinet interior
+            // Position at cabinet front interior, just behind where drawer sits when closed
+            // This makes it visible when drawer slides forward
+            interiorBack.position.z = depth / 2 - 0.08;
             interiorBack.receiveShadow = true;
             cartGroup.add(interiorBack);
         });
