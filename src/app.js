@@ -586,9 +586,10 @@ export function init() {
 
     // ===== STEP 2: SETUP 2D CANVAS =====
     console.log('🎨 Setting up 2D canvas...');
-    canvas = document.getElementById('room-canvas');
-    ctx = canvas.getContext('2d');
-
+    if (!initCanvas()) {
+        console.error('Failed to initialize canvas');
+        return;
+    }
     setupCanvas();
 
     // Sync UI controls with loaded config
@@ -598,8 +599,11 @@ export function init() {
     document.getElementById('grid-size').value = STATE.gridSize;
 
     // Set canvas size based on room dimensions
-    canvas.width = CONFIG.roomSettings.width * CONFIG.roomSettings.pixelsPerFoot;
-    canvas.height = CONFIG.roomSettings.depth * CONFIG.roomSettings.pixelsPerFoot;
+    updateCanvasSize(
+        CONFIG.roomSettings.width,
+        CONFIG.roomSettings.depth,
+        CONFIG.roomSettings.pixelsPerFoot
+    );
 
     drawCanvas();
     console.log('✓ 2D canvas ready');
