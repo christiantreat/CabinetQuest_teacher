@@ -100,6 +100,36 @@ export function recordAction(actionType, data) {
 }
 
 /**
+ * Checks if there are actions available to undo.
+ *
+ * @returns {boolean} True if there are actions in the undo stack
+ *
+ * @example
+ * // Check if undo is available
+ * if (canUndo()) {
+ *   undo();
+ * }
+ */
+export function canUndo() {
+    return HISTORY.undoStack.length > 0;
+}
+
+/**
+ * Checks if there are actions available to redo.
+ *
+ * @returns {boolean} True if there are actions in the redo stack
+ *
+ * @example
+ * // Check if redo is available
+ * if (canRedo()) {
+ *   redo();
+ * }
+ */
+export function canRedo() {
+    return HISTORY.redoStack.length > 0;
+}
+
+/**
  * Undoes the last action on the undo stack.
  * Moves the action to the redo stack and applies its reverse.
  * Sets the isPerformingAction flag to prevent recursive recording.
