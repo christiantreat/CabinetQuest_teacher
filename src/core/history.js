@@ -14,6 +14,8 @@
  * - UPDATE operations for properties of any entity type
  *
  * Each action stores both the new state and old state to enable bidirectional navigation.
+ *
+ * @version 1.0.1 - Added canUndo and canRedo exports
  */
 
 // Note: This module depends on external functions from other modules:
