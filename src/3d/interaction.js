@@ -87,6 +87,8 @@ let cartDragStartPosition = null;
  * @example
  * initThreeJS();
  * init3DInteraction();
+ *
+ * @version 2.1 - Fixed: Now uses setRaycaster/setMouse instead of Object.assign
  */
 export function init3DInteraction() {
     // Initialize raycaster for picking objects in 3D space

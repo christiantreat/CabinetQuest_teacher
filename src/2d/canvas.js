@@ -97,6 +97,8 @@ export function initCanvas() {
  * setupCanvas();
  *
  * @see {@link module:src/2d/interaction} for mouse event handler implementations
+ *
+ * @version 2.1 - Requires initCanvas() to be called first
  */
 export function setupCanvas() {
     // Import handler functions (these should be passed as dependencies or imported)
