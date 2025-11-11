@@ -884,21 +884,21 @@ function initThreeJS() {
     }
 
     // Lighting (hospital environment)
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
     scene.add(ambientLight);
 
-    // Ceiling lights
-    const ceilingLight1 = new THREE.PointLight(0xffffff, 0.5, 30);
+    // Ceiling lights - improved overhead lighting
+    const ceilingLight1 = new THREE.PointLight(0xffffff, 1.2, 30);
     ceilingLight1.position.set(-10, ROOM_HEIGHT - 1, 0);
     ceilingLight1.castShadow = true;
     scene.add(ceilingLight1);
 
-    const ceilingLight2 = new THREE.PointLight(0xffffff, 0.5, 30);
+    const ceilingLight2 = new THREE.PointLight(0xffffff, 1.2, 30);
     ceilingLight2.position.set(10, ROOM_HEIGHT - 1, 0);
     ceilingLight2.castShadow = true;
     scene.add(ceilingLight2);
 
-    const ceilingLight3 = new THREE.PointLight(0xffffff, 0.5, 30);
+    const ceilingLight3 = new THREE.PointLight(0xffffff, 1.2, 30);
     ceilingLight3.position.set(0, ROOM_HEIGHT - 1, -8);
     ceilingLight3.castShadow = true;
     scene.add(ceilingLight3);
@@ -1090,6 +1090,20 @@ function create3DCart(cartData) {
             drawerGroup.userData.closedZ = 0;
             drawerGroup.userData.openZ = depth * 0.4;
             cartGroup.add(drawerGroup);
+
+            // Add black interior back wall behind drawer opening
+            const interiorBackGeometry = new THREE.PlaneGeometry(width * 0.96, drawerHeight);
+            const interiorBackMaterial = new THREE.MeshStandardMaterial({
+                color: 0x000000, // Black
+                roughness: 0.9,
+                metalness: 0.1,
+                side: THREE.DoubleSide
+            });
+            const interiorBack = new THREE.Mesh(interiorBackGeometry, interiorBackMaterial);
+            interiorBack.position.y = yPos;
+            interiorBack.position.z = -depth * 0.45; // Positioned at back of cabinet interior
+            interiorBack.receiveShadow = true;
+            cartGroup.add(interiorBack);
         });
     }
 
