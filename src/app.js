@@ -126,6 +126,12 @@ import {
 } from './ui/hierarchy.js';
 
 import {
+    updateRoomSize,
+    updateRoomBackground,
+    updateSnapToGrid
+} from './ui/roomSettings.js';
+
+import {
     updateInspector
 } from './ui/inspector/inspector.js';
 
@@ -733,6 +739,9 @@ const App = {
     filterHierarchy,
     updateStatusBar,
     updateInspector,
+    updateRoomSize,
+    updateRoomBackground,
+    updateSnapToGrid,
 
     // ===== ENTITY MANAGEMENT =====
     createNewCart,
@@ -828,6 +837,22 @@ if (typeof window !== 'undefined') {
     window.toggleCameraView = toggleCameraView;
     window.previewGame = previewGame;
     window.closeModal = closeModal;
+    window.updateRoomSize = updateRoomSize;
+    window.updateRoomBackground = updateRoomBackground;
+    window.updateSnapToGrid = updateSnapToGrid;
+    window.drawCanvas = drawCanvas;
+
+    // Expose entity creation functions for hierarchy UI
+    window.createNewCart = createNewCart;
+    window.createNewDrawer = createNewDrawer;
+    window.createNewItem = createNewItem;
+    window.createNewScenario = createNewScenario;
+    window.createNewCameraView = createNewCameraView;
+    window.createNewAchievement = createNewAchievement;
+
+    // Expose selection and inspector functions
+    window.selectEntity = selectEntity;
+    window.updateInspector = updateInspector;
 
     // Setup window.onload handler
     window.onload = init;
