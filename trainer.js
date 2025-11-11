@@ -323,13 +323,15 @@ function switchCameraView(viewId) {
     camera.fov = view.fov;
     camera.updateProjectionMatrix();
 
-    // Look at target
-    const lookAt = new THREE.Vector3(view.lookAt.x, view.lookAt.y, view.lookAt.z);
-    const direction = lookAt.sub(playerPosition).normalize();
+    // Use Three.js lookAt to properly set camera rotation
+    // This ensures the rotation matches what's shown in the Game Designer preview
+    const lookAtTarget = new THREE.Vector3(view.lookAt.x, view.lookAt.y, view.lookAt.z);
+    camera.position.copy(playerPosition);
+    camera.lookAt(lookAtTarget);
 
-    // Three.js cameras look down their local -Z axis, so we need to negate direction.z
-    playerRotation.yaw = Math.atan2(direction.x, -direction.z);
-    playerRotation.pitch = Math.asin(-direction.y);
+    // Extract the yaw and pitch from the camera's rotation (which is in 'YXZ' order)
+    playerRotation.yaw = camera.rotation.y;
+    playerRotation.pitch = camera.rotation.x;
 
     console.log(`Switched to camera view: ${view.name}`);
     logCameraState(`AFTER SWITCHING TO: ${view.name}`);
@@ -795,17 +797,20 @@ function loadConfiguration() {
             console.log(`     Look At: (${view.lookAt.x.toFixed(2)}, ${view.lookAt.y.toFixed(2)}, ${view.lookAt.z.toFixed(2)}) ft`);
             console.log(`     FOV: ${view.fov}°, Type: ${view.type}`);
 
-            // Calculate and show rotation data (matches Game Designer display)
+            // Calculate rotation using Three.js lookAt (same method as switchCameraView)
+            const tempCamera = new THREE.PerspectiveCamera();
+            tempCamera.rotation.order = 'YXZ'; // Match main camera rotation order
             const position = new THREE.Vector3(view.position.x, view.position.y, view.position.z);
             const lookAt = new THREE.Vector3(view.lookAt.x, view.lookAt.y, view.lookAt.z);
-            const direction = lookAt.clone().sub(position).normalize();
-            const yaw = Math.atan2(direction.x, -direction.z);
-            const pitch = Math.asin(-direction.y);
+            tempCamera.position.copy(position);
+            tempCamera.lookAt(lookAt);
+            const yaw = tempCamera.rotation.y;
+            const pitch = tempCamera.rotation.x;
             const yawDeg = yaw * 180 / Math.PI;
             const pitchDeg = pitch * 180 / Math.PI;
 
             console.log(`     Calculated Rotation - Yaw: ${yawDeg.toFixed(2)}°, Pitch: ${pitchDeg.toFixed(2)}°`);
-            console.log(`     (These values match the Game Designer inspector)`);
+            console.log(`     (Rotation calculated using Three.js lookAt for accurate preview)`);
         });
     } else {
         console.log('No camera view presets configured');
