@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CabinetQuest Teacher - Module Integration Example</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!--
+        INTEGRATION GUIDE
+        =================
+
+        This example shows how to integrate the new modular app.js
+        into your existing index.html file.
+
+        Key Changes:
+        1. Load Three.js and OrbitControls BEFORE app.js
+        2. Load app.js as an ES6 module (type="module")
+        3. Remove the old teacher.js script tag
+        4. HTML onclick handlers work the same way (window.functionName)
+    -->
+
+    <!-- Your existing HTML structure -->
+    <div class="app-container">
+        <!-- Toolbar with onclick handlers -->
+        <div class="toolbar">
+            <button class="toolbar-btn" id="btn-undo" onclick="undo()" disabled title="Undo (Ctrl+Z)">
+                ↶ Undo
+            </button>
+            <button class="toolbar-btn" id="btn-redo" onclick="redo()" disabled title="Redo (Ctrl+Y)">
+                ↷ Redo
+            </button>
+            <button class="toolbar-btn success" onclick="saveAll()">
+                💾 Save All
+            </button>
+            <button class="toolbar-btn" onclick="exportConfiguration()">
+                📥 Export
+            </button>
+            <button class="toolbar-btn" onclick="importConfiguration()">
+                📤 Import
+            </button>
+            <button class="toolbar-btn" onclick="previewGame()">
+                ▶ Preview Game
+            </button>
+            <button class="toolbar-btn danger" onclick="resetToDefaults()">
+                🔄 Reset
+            </button>
+        </div>
+
+        <!-- Canvas controls -->
+        <div class="canvas-controls">
+            <button class="canvas-mode-btn active" id="mode-room" onclick="setCanvasMode('room')">
+                🏥 Room Layout
+            </button>
+            <button class="canvas-mode-btn" id="mode-overview" onclick="setCanvasMode('overview')">
+                📊 Overview
+            </button>
+            <button class="canvas-mode-btn" id="toggle-camera-view" onclick="toggleCameraView()">
+                📷 Top View
+            </button>
+        </div>
+
+        <!-- Hierarchy panel -->
+        <div class="hierarchy-panel">
+            <div class="panel-header">
+                <h3>Hierarchy</h3>
+                <button class="panel-header-btn" onclick="refreshHierarchy()">↻</button>
+            </div>
+            <div id="hierarchy-tree"></div>
+        </div>
+
+        <!-- Canvas and 3D view -->
+        <div class="canvas-container">
+            <canvas id="room-canvas"></canvas>
+        </div>
+
+        <div id="three-container"></div>
+
+        <!-- Inspector panel -->
+        <div class="inspector-panel">
+            <div id="inspector-content"></div>
+        </div>
+
+        <!-- Status bar -->
+        <div id="status-bar">
+            <span id="status-carts">Carts: 0</span>
+            <span id="status-drawers">Drawers: 0</span>
+            <span id="status-items">Items: 0</span>
+        </div>
+
+        <!-- Alert toast -->
+        <div id="alert-toast" class="alert-toast"></div>
+
+        <!-- Import modal -->
+        <div id="import-modal" class="modal">
+            <div class="modal-content">
+                <button class="modal-close" onclick="closeModal('import-modal')">×</button>
+                <h2>Import Configuration</h2>
+                <input type="file" id="import-file" accept=".json">
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" onclick="closeModal('import-modal')">Cancel</button>
+                    <button class="btn btn-primary" onclick="processImport()">Import</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!--
+        CRITICAL: Load Three.js and dependencies FIRST
+        These must be available before app.js loads
+    -->
+    <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+
+    <!-- OrbitControls (if not bundled with Three.js) -->
+    <script>
+        // Define OrbitControls if it's not already in THREE namespace
+        // This example assumes it's available as THREE.OrbitControls
+        // or you need to include it from CDN
+    </script>
+
+    <!--
+        OPTION 1: Load as ES6 Module (Recommended)
+        ==========================================
+        This is the modern approach and allows for:
+        - Tree shaking (unused code removal)
+        - Proper module scoping
+        - Better debugging with source maps
+
+        NOTE: This requires a web server (doesn't work with file://)
+        Use: python -m http.server 8000
+        Or: npx serve
+    -->
+    <script type="module" src="src/app.js"></script>
+
+    <!--
+        OPTION 2: Build Step with Bundler
+        ==================================
+        If you want to support older browsers or need optimization:
+
+        1. Install a bundler (e.g., vite):
+           npm install -D vite
+
+        2. Create vite.config.js:
+           export default {
+               build: {
+                   outDir: 'dist',
+                   rollupOptions: {
+                       input: {
+                           main: 'src/app.js'
+                       }
+                   }
+               }
+           }
+
+        3. Build:
+           npx vite build
+
+        4. Use the bundled file:
+           <script src="dist/assets/main.js"></script>
+    -->
+
+    <!--
+        OPTION 3: Import Maps (Modern Alternative)
+        ===========================================
+        For more control over module loading:
+
+        <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "app": "/src/app.js"
+            }
+        }
+        </script>
+
+        <script type="module">
+            import App from 'app';
+            // App is now available
+        </script>
+    -->
+
+    <!--
+        BACKWARD COMPATIBILITY
+        ======================
+        If you need to support the old teacher.js temporarily:
+
+        1. Keep teacher.js but comment out duplicate code
+        2. Load app.js first, then teacher.js
+        3. Gradually migrate functions to use window.App
+
+        Example:
+        <script type="module" src="src/app.js"></script>
+        <script src="teacher.js"></script>
+    -->
+
+    <!--
+        DEVELOPMENT vs PRODUCTION
+        =========================
+
+        Development:
+        - Load unminified modules for debugging
+        - Use source maps
+        - Hot module reloading (with vite dev server)
+
+        Production:
+        - Bundle and minify all modules
+        - Remove console.log statements
+        - Optimize assets
+        - Enable caching
+
+        Example npm scripts in package.json:
+        {
+            "scripts": {
+                "dev": "vite",
+                "build": "vite build",
+                "preview": "vite preview"
+            }
+        }
+    -->
+
+    <!--
+        TESTING THE INTEGRATION
+        =======================
+
+        1. Open browser developer console (F12)
+        2. Check for errors in Console tab
+        3. Verify window.App is defined:
+           > window.App
+           > window.CONFIG
+           > window.STATE
+
+        4. Test a function:
+           > window.App.saveAll()
+           > window.undo()
+
+        5. Check initialization logs:
+           > Look for "🚀 Initializing CabinetQuest Teacher..."
+           > Look for "✅ CabinetQuest Teacher initialized successfully!"
+
+        6. Test onclick handlers:
+           - Click toolbar buttons
+           - Check that functions execute
+           - Verify no "function is not defined" errors
+    -->
+
+    <!--
+        COMMON ISSUES AND SOLUTIONS
+        ============================
+
+        Issue: "Uncaught SyntaxError: Cannot use import statement outside a module"
+        Solution: Add type="module" to script tag
+
+        Issue: "Failed to resolve module specifier"
+        Solution: Use relative paths (./src/app.js) not bare specifiers
+
+        Issue: "CORS policy" error when loading locally
+        Solution: Run a local web server, don't open file:// directly
+
+        Issue: "THREE is not defined"
+        Solution: Load Three.js before app.js
+
+        Issue: "window.App is undefined"
+        Solution: Check console for initialization errors, ensure app.js loaded
+
+        Issue: Onclick handlers not working
+        Solution: Verify functions are exposed to window in app.js
+    -->
+
+</body>
+</html>
