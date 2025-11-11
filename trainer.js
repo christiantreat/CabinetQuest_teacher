@@ -794,6 +794,18 @@ function loadConfiguration() {
             console.log(`     Position: (${view.position.x.toFixed(2)}, ${view.position.y.toFixed(2)}, ${view.position.z.toFixed(2)}) ft`);
             console.log(`     Look At: (${view.lookAt.x.toFixed(2)}, ${view.lookAt.y.toFixed(2)}, ${view.lookAt.z.toFixed(2)}) ft`);
             console.log(`     FOV: ${view.fov}°, Type: ${view.type}`);
+
+            // Calculate and show rotation data (matches Game Designer display)
+            const position = new THREE.Vector3(view.position.x, view.position.y, view.position.z);
+            const lookAt = new THREE.Vector3(view.lookAt.x, view.lookAt.y, view.lookAt.z);
+            const direction = lookAt.clone().sub(position).normalize();
+            const yaw = Math.atan2(direction.x, -direction.z);
+            const pitch = Math.asin(-direction.y);
+            const yawDeg = yaw * 180 / Math.PI;
+            const pitchDeg = pitch * 180 / Math.PI;
+
+            console.log(`     Calculated Rotation - Yaw: ${yawDeg.toFixed(2)}°, Pitch: ${pitchDeg.toFixed(2)}°`);
+            console.log(`     (These values match the Game Designer inspector)`);
         });
     } else {
         console.log('No camera view presets configured');
