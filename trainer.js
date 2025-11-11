@@ -1150,16 +1150,18 @@ function createDrawer(cartData, drawerNumber, width, height, depth) {
     // Drawer front face
     const frontGeometry = new THREE.BoxGeometry(drawerWidth, height, wallThickness);
     const front = new THREE.Mesh(frontGeometry, frontMaterial);
-    front.position.z = depth / 2 - wallThickness / 2;
+    // Position slightly in front of cabinet to prevent z-fighting
+    front.position.z = depth / 2 + 0.005;
     front.castShadow = true;
     front.userData.interactable = true;
     drawerGroup.add(front);
 
-    // Drawer bottom
+    // Drawer bottom (positioned relative to the new front face position)
     const bottomGeometry = new THREE.BoxGeometry(drawerWidth - wallThickness * 2, wallThickness, drawerDepth);
     const bottom = new THREE.Mesh(bottomGeometry, interiorMaterial);
     bottom.position.y = -height / 2 + wallThickness / 2;
-    bottom.position.z = (depth / 2 - drawerDepth / 2) - wallThickness;
+    // Position from inside surface of front face, extending backward
+    bottom.position.z = (depth / 2 + 0.005 - wallThickness / 2) - wallThickness / 2 - drawerDepth / 2;
     bottom.receiveShadow = true;
     drawerGroup.add(bottom);
 
@@ -1167,21 +1169,21 @@ function createDrawer(cartData, drawerNumber, width, height, depth) {
     const sideGeometry = new THREE.BoxGeometry(wallThickness, height - wallThickness, drawerDepth);
     const leftSide = new THREE.Mesh(sideGeometry, interiorMaterial);
     leftSide.position.x = -drawerWidth / 2 + wallThickness / 2;
-    leftSide.position.z = (depth / 2 - drawerDepth / 2) - wallThickness;
+    leftSide.position.z = (depth / 2 + 0.005 - wallThickness / 2) - wallThickness / 2 - drawerDepth / 2;
     leftSide.castShadow = true;
     drawerGroup.add(leftSide);
 
     // Drawer right side
     const rightSide = new THREE.Mesh(sideGeometry, interiorMaterial);
     rightSide.position.x = drawerWidth / 2 - wallThickness / 2;
-    rightSide.position.z = (depth / 2 - drawerDepth / 2) - wallThickness;
+    rightSide.position.z = (depth / 2 + 0.005 - wallThickness / 2) - wallThickness / 2 - drawerDepth / 2;
     rightSide.castShadow = true;
     drawerGroup.add(rightSide);
 
     // Drawer back
     const backGeometry = new THREE.BoxGeometry(drawerWidth - wallThickness * 2, height - wallThickness, wallThickness);
     const back = new THREE.Mesh(backGeometry, interiorMaterial);
-    back.position.z = depth / 2 - drawerDepth - wallThickness / 2;
+    back.position.z = (depth / 2 + 0.005 - wallThickness / 2) - wallThickness / 2 - drawerDepth;
     back.castShadow = true;
     drawerGroup.add(back);
 
@@ -1194,7 +1196,8 @@ function createDrawer(cartData, drawerNumber, width, height, depth) {
     });
     const handle = new THREE.Mesh(handleGeometry, handleMaterial);
     handle.rotation.z = Math.PI / 2;
-    handle.position.z = depth / 2 + 0.02;
+    // Position handle in front of drawer face
+    handle.position.z = depth / 2 + 0.005 + wallThickness / 2 + 0.015;
     drawerGroup.add(handle);
 
     return drawerGroup;
@@ -1507,8 +1510,10 @@ function updateLookingAt() {
 
     // Clear previous highlight
     if (lookingAtDrawer) {
-        const prevDrawer = lookingAtDrawer.parent;
-        prevDrawer.children[0].material.emissive = new THREE.Color(0x000000);
+        if (lookingAtDrawer.material) {
+            lookingAtDrawer.material.emissive = new THREE.Color(0x000000);
+            lookingAtDrawer.material.emissiveIntensity = 0;
+        }
     }
 
     if (intersects.length > 0) {
@@ -1517,9 +1522,11 @@ function updateLookingAt() {
 
         lookingAtDrawer = drawerMesh;
 
-        // Highlight
-        drawerMesh.material.emissive = new THREE.Color(0x0e639c);
-        drawerMesh.material.emissiveIntensity = 0.3;
+        // Highlight - ensure material properties exist
+        if (drawerMesh.material) {
+            drawerMesh.material.emissive = new THREE.Color(0x0e639c);
+            drawerMesh.material.emissiveIntensity = 0.3;
+        }
 
         // Show interaction prompt
         const drawerName = drawerGroup.userData.drawerName || 'Drawer';
