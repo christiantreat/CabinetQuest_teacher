@@ -575,6 +575,8 @@ function sync3DToWindow() {
  * 6. Start autosave timer
  *
  * Called automatically on window.onload
+ *
+ * @version 2.1 - Fixed: Now uses initCanvas() before setupCanvas()
  */
 export function init() {
     console.log('🚀 Initializing CabinetQuest Teacher...');
