@@ -2125,6 +2125,9 @@ function buildCameraViewInspector(view, container) {
         `<option value="${d.id}" ${view.targetDrawer === d.id ? 'selected' : ''}>${d.name}</option>`
     ).join('');
 
+    // Calculate rotation data to show consistency with game preview
+    const rotationData = calculateCameraRotationData(view);
+
     container.innerHTML = `
         <div class="inspector-section">
             <div class="inspector-section-title">Camera View Properties</div>
@@ -2184,6 +2187,41 @@ function buildCameraViewInspector(view, container) {
             <div class="form-field">
                 <label>Z Target</label>
                 <input type="number" step="0.5" value="${view.lookAt.z}" onchange="updateCameraViewLookAt('z', parseFloat(this.value))">
+            </div>
+        </div>
+
+        <div class="inspector-section" style="background-color: #f0f8ff; border-left: 4px solid #4CAF50;">
+            <div class="inspector-section-title">📐 Calculated Rotation (Game Preview)</div>
+            <div style="font-size: 12px; color: #666; margin-bottom: 10px; padding: 8px; background: white; border-radius: 4px;">
+                This shows how the camera will appear in game preview mode
+            </div>
+
+            <div class="form-field">
+                <label>Yaw (Horizontal Rotation)</label>
+                <div style="padding: 8px; background: white; border-radius: 4px; font-family: monospace;">
+                    ${rotationData.yawDeg.toFixed(2)}° (${rotationData.yaw.toFixed(4)} rad)
+                </div>
+            </div>
+
+            <div class="form-field">
+                <label>Pitch (Vertical Rotation)</label>
+                <div style="padding: 8px; background: white; border-radius: 4px; font-family: monospace;">
+                    ${rotationData.pitchDeg.toFixed(2)}° (${rotationData.pitch.toFixed(4)} rad)
+                </div>
+            </div>
+
+            <div class="form-field">
+                <label>Direction Vector</label>
+                <div style="padding: 8px; background: white; border-radius: 4px; font-family: monospace;">
+                    (${rotationData.direction.x.toFixed(4)}, ${rotationData.direction.y.toFixed(4)}, ${rotationData.direction.z.toFixed(4)})
+                </div>
+            </div>
+
+            <div class="form-field">
+                <label>Facing Direction</label>
+                <div style="padding: 8px; background: white; border-radius: 4px; font-weight: bold; color: #4CAF50;">
+                    ${rotationData.facing}
+                </div>
             </div>
         </div>
 
@@ -2575,6 +2613,7 @@ function updateCameraViewProperty(prop, value) {
         });
 
         buildHierarchy();
+        updateInspector(); // Refresh to show updated rotation/direction if needed
     }
 }
 
@@ -2583,6 +2622,7 @@ function updateCameraViewPosition(axis, value) {
     if (view) {
         view.position[axis] = value;
         STATE.unsavedChanges = true;
+        updateInspector(); // Refresh to show updated rotation/direction
     }
 }
 
@@ -2591,7 +2631,48 @@ function updateCameraViewLookAt(axis, value) {
     if (view) {
         view.lookAt[axis] = value;
         STATE.unsavedChanges = true;
+        updateInspector(); // Refresh to show updated rotation/direction
     }
+}
+
+// Calculate camera rotation data from position and lookAt target
+// This matches the exact conversion logic used in trainer.js switchCameraView()
+function calculateCameraRotationData(view) {
+    // Create position and lookAt vectors
+    const position = new THREE.Vector3(view.position.x, view.position.y, view.position.z);
+    const lookAt = new THREE.Vector3(view.lookAt.x, view.lookAt.y, view.lookAt.z);
+
+    // Calculate direction vector from position to lookAt
+    const direction = lookAt.clone().sub(position).normalize();
+
+    // Calculate yaw and pitch (same formula as trainer.js:331-332)
+    // Three.js cameras look down their local -Z axis, so we need to negate direction.z
+    const yaw = Math.atan2(direction.x, -direction.z);
+    const pitch = Math.asin(-direction.y);
+
+    // Calculate direction vector from yaw and pitch (same as trainer.js:1766-1770)
+    const directionFromRotation = new THREE.Vector3(
+        Math.sin(yaw) * Math.cos(pitch),
+        -Math.sin(pitch),
+        -Math.cos(yaw) * Math.cos(pitch)
+    );
+
+    // Determine human-readable facing direction (same as trainer.js:1773-1778)
+    const yawDeg = yaw * 180 / Math.PI;
+    let facing = '';
+    if (yawDeg >= -45 && yawDeg < 45) facing = 'South (into room, -Z)';
+    else if (yawDeg >= 45 && yawDeg < 135) facing = 'West (-X)';
+    else if (yawDeg >= 135 || yawDeg < -135) facing = 'North (toward entrance, +Z)';
+    else facing = 'East (+X)';
+
+    return {
+        yaw: yaw,
+        yawDeg: yawDeg,
+        pitch: pitch,
+        pitchDeg: pitch * 180 / Math.PI,
+        direction: directionFromRotation,
+        facing: facing
+    };
 }
 
 function setCameraViewPreset(preset) {
