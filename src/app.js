@@ -669,7 +669,8 @@ export function previewGame() {
     saveConfiguration();
 
     // Open the trainer page (the actual game)
-    const previewUrl = 'trainer.html';
+    // Add timestamp to prevent browser from using cached version
+    const previewUrl = 'trainer.html?v=' + Date.now();
     const previewWindow = window.open(previewUrl, '_blank');
 
     if (previewWindow) {
