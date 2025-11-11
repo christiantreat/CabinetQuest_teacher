@@ -144,6 +144,22 @@ export function setDragPlane(plane) {
     dragPlane = plane;
 }
 
+/**
+ * Set the raycaster reference
+ * @param {THREE.Raycaster} newRaycaster - The raycaster instance
+ */
+export function setRaycaster(newRaycaster) {
+    raycaster = newRaycaster;
+}
+
+/**
+ * Set the mouse vector reference
+ * @param {THREE.Vector2} newMouse - The mouse vector instance
+ */
+export function setMouse(newMouse) {
+    mouse = newMouse;
+}
+
 // ===== SCENE INITIALIZATION =====
 
 /**

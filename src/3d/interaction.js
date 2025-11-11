@@ -43,7 +43,9 @@ import {
     dragPlane,
     cartMeshes,
     setSelectedCart3D,
-    setDragPlane
+    setDragPlane,
+    setRaycaster,
+    setMouse
 } from './scene.js';
 import { controls } from './sceneObjects.js';
 import { selectCart3D, deselectCart3D, selectDrawer3D, deselectDrawer3D } from './selection.js';
@@ -90,12 +92,12 @@ export function init3DInteraction() {
     // Initialize raycaster for picking objects in 3D space
     // Raycaster creates a ray from camera through mouse position
     const newRaycaster = new THREE.Raycaster();
-    Object.assign(raycaster, newRaycaster);
+    setRaycaster(newRaycaster);
 
     // Initialize mouse vector for normalized device coordinates
     // NDC range from -1 to +1 for both x and y
     const newMouse = new THREE.Vector2();
-    Object.assign(mouse, newMouse);
+    setMouse(newMouse);
 
     // Create invisible drag plane at floor level
     // This plane is used for raycasting during cart drag operations
