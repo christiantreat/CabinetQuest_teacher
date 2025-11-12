@@ -20,6 +20,8 @@
  * @version 1.0.0
  */
 
+import { loadDefaultConfiguration } from '../config/defaultData.js';
+
 /**
  * Saves the current configuration to localStorage.
  *
@@ -121,7 +123,7 @@ export function loadConfiguration() {
         CONFIG.generalSettings = loadedConfig.generalSettings || CONFIG.generalSettings;
     } else {
         // No saved configuration found - initialize with defaults
-        loadDefaultConfiguration();
+        loadDefaultConfiguration(CONFIG);
     }
 
     // Update UI elements to reflect loaded settings

@@ -28,6 +28,8 @@
  * @version 2.0.0
  */
 
+import { loadDefaultConfiguration } from '../config/defaultData.js';
+
 /**
  * Validates and migrates a configuration to the current version format.
  *
@@ -212,7 +214,7 @@ export function resetToDefaults() {
 
     // Step 3: Load the default configuration
     // This populates CONFIG with factory defaults
-    loadDefaultConfiguration();
+    loadDefaultConfiguration(CONFIG);
 
     // Step 4: Clear any selected entities in the UI
     deselectEntity();
