@@ -10,6 +10,9 @@
  *                    buildAll3DCarts, updateInspector, selectEntity, showAlert)
  */
 
+import { recordAction } from '../core/history.js';
+import { buildHierarchy } from '../ui/hierarchy.js';
+
 // ========================================
 // ITEM PROPERTY UPDATES
 // ========================================

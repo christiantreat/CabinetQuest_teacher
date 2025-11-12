@@ -9,6 +9,8 @@
  * @requires helpers (getEntity, recordAction, buildHierarchy, selectEntity, showAlert)
  */
 
+import { buildHierarchy } from '../ui/hierarchy.js';
+
 // ========================================
 // ACHIEVEMENT PROPERTY UPDATES
 // ========================================

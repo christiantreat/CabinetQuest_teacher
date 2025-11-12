@@ -11,6 +11,9 @@
  * @requires 3d (cartMeshes)
  */
 
+import { recordAction } from '../core/history.js';
+import { buildHierarchy } from '../ui/hierarchy.js';
+
 // ========================================
 // CART PROPERTY UPDATES
 // ========================================

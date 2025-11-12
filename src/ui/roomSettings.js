@@ -23,8 +23,11 @@ export function updateRoomSize() {
     window.CONFIG.roomSettings.depth = depthFeet;
 
     // Update canvas size based on feet and scale factor
-    window.canvas.width = widthFeet * window.CONFIG.roomSettings.pixelsPerFoot;
-    window.canvas.height = depthFeet * window.CONFIG.roomSettings.pixelsPerFoot;
+    const canvas = document.getElementById('room-canvas');
+    if (canvas) {
+        canvas.width = widthFeet * window.CONFIG.roomSettings.pixelsPerFoot;
+        canvas.height = depthFeet * window.CONFIG.roomSettings.pixelsPerFoot;
+    }
 
     window.STATE.unsavedChanges = true;
     window.App.drawCanvas();

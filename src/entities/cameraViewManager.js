@@ -11,6 +11,8 @@
  *                    selectEntity, showAlert)
  */
 
+import { buildHierarchy } from '../ui/hierarchy.js';
+
 // ========================================
 // CAMERA VIEW PROPERTY UPDATES
 // ========================================
