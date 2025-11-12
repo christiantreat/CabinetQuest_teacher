@@ -170,28 +170,28 @@ export function buildHierarchy() {
             name: 'Camera Views',      // Display name
             icon: '📷',                // Icon shown in tree
             items: CONFIG.cameraViews, // Data array from CONFIG
-            createNew: typeof createNewCameraView === 'function' ? createNewCameraView : null
+            createNew: typeof window.createNewCameraView === 'function' ? window.createNewCameraView : null
         },
         {
             id: 'scenarios',
             name: 'Scenarios',
             icon: '📋',
             items: CONFIG.scenarios,
-            createNew: typeof createNewScenario === 'function' ? createNewScenario : null
+            createNew: typeof window.createNewScenario === 'function' ? window.createNewScenario : null
         },
         {
             id: 'items',
             name: 'Items',
             icon: '📦',
             items: CONFIG.items,
-            createNew: typeof createNewItem === 'function' ? createNewItem : null
+            createNew: typeof window.createNewItem === 'function' ? window.createNewItem : null
         },
         {
             id: 'achievements',
             name: 'Achievements',
             icon: '🏆',
             items: CONFIG.achievements,
-            createNew: typeof createNewAchievement === 'function' ? createNewAchievement : null
+            createNew: typeof window.createNewAchievement === 'function' ? window.createNewAchievement : null
         }
     ];
 
@@ -287,8 +287,8 @@ export function createCartsWithDrawersNode() {
     createBtn.innerHTML = `<span class="tree-item-icon">+</span><span class="tree-item-name">Create New Cart</span>`;
 
     // Attach the create function if it exists (still in teacher.js)
-    if (typeof createNewCart === 'function') {
-        createBtn.onclick = createNewCart;
+    if (typeof window.createNewCart === 'function') {
+        createBtn.onclick = window.createNewCart;
     }
     itemsDiv.appendChild(createBtn);
 
@@ -354,8 +354,8 @@ export function createCartsWithDrawersNode() {
                 e.stopPropagation(); // Don't trigger cart selection
 
                 // Call the create function if it exists (still in teacher.js)
-                if (typeof createNewDrawer === 'function') {
-                    createNewDrawer();
+                if (typeof window.createNewDrawer === 'function') {
+                    window.createNewDrawer();
 
                     // Auto-assign the new drawer to this cart
                     // We do this in a timeout to allow the drawer to be created first
@@ -366,8 +366,8 @@ export function createCartsWithDrawersNode() {
                             buildHierarchy(); // Refresh to show the drawer under this cart
 
                             // Update inspector if available
-                            if (typeof updateInspector === 'function') {
-                                updateInspector();
+                            if (typeof window.updateInspector === 'function') {
+                                window.updateInspector();
                             }
                         }
                     }, 100);
