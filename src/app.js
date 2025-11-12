@@ -842,6 +842,13 @@ if (typeof window !== 'undefined') {
     window.updateSnapToGrid = updateSnapToGrid;
     window.drawCanvas = drawCanvas;
 
+    // Expose core helper functions for entity managers
+    window.recordAction = recordAction;
+    window.buildHierarchy = buildHierarchy;
+    window.getEntity = getEntity;
+    window.buildAll3DCarts = buildAll3DCarts;
+    window.showAlert = showAlert;
+
     // Expose entity creation functions for hierarchy UI
     window.createNewCart = createNewCart;
     window.createNewDrawer = createNewDrawer;
