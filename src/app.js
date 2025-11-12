@@ -848,6 +848,7 @@ if (typeof window !== 'undefined') {
     window.getEntity = getEntity;
     window.buildAll3DCarts = buildAll3DCarts;
     window.showAlert = showAlert;
+    window.updateStatusBar = updateStatusBar;
 
     // Expose entity creation functions for hierarchy UI
     window.createNewCart = createNewCart;
