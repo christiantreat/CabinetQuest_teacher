@@ -9,6 +9,16 @@
  * @requires helpers (getEntity, recordAction, buildHierarchy, selectEntity, showAlert)
  */
 
+// Import required globals and helper functions
+const CONFIG = window.CONFIG;
+const STATE = window.STATE;
+const getEntity = window.getEntity;
+const recordAction = window.recordAction;
+const buildHierarchy = window.buildHierarchy;
+const selectEntity = window.selectEntity;
+const showAlert = window.showAlert;
+const updateStatusBar = window.updateStatusBar;
+
 // ========================================
 // SCENARIO PROPERTY UPDATES
 // ========================================

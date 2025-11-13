@@ -11,6 +11,21 @@
  * @requires 3d (cartMeshes)
  */
 
+// Import required globals and helper functions
+const CONFIG = window.CONFIG;
+const STATE = window.STATE;
+const CART_TYPES = window.CART_TYPES;
+const cartMeshes = () => window.cartMeshes;
+const getEntity = window.getEntity;
+const recordAction = window.recordAction;
+const buildHierarchy = window.buildHierarchy;
+const drawCanvas = window.drawCanvas;
+const buildAll3DCarts = window.buildAll3DCarts;
+const updateInspector = window.updateInspector;
+const selectEntity = window.selectEntity;
+const showAlert = window.showAlert;
+const updateStatusBar = window.updateStatusBar;
+
 // ========================================
 // CART PROPERTY UPDATES
 // ========================================
@@ -78,7 +93,8 @@ export function updateCartProperty(prop, value) {
 
         // If position changed from inspector, update 3D position
         if (prop === 'x' || prop === 'y') {
-            const cart3D = cartMeshes.get(cart.id);
+            const meshes = cartMeshes();
+            const cart3D = meshes.get ? meshes.get(cart.id) : meshes[cart.id];
             if (cart3D) {
                 const roomWidth = CONFIG.roomSettings.width;
                 const roomDepth = CONFIG.roomSettings.depth;
@@ -89,7 +105,8 @@ export function updateCartProperty(prop, value) {
 
         // If rotation changed, update 3D rotation
         if (prop === 'rotation') {
-            const cart3D = cartMeshes.get(cart.id);
+            const meshes = cartMeshes();
+            const cart3D = meshes.get ? meshes.get(cart.id) : meshes[cart.id];
             if (cart3D) {
                 cart3D.rotation.y = (value * Math.PI) / 180; // Convert degrees to radians
             }
