@@ -39,7 +39,6 @@
  * @version 1.0.0
  */
 
-import { CONFIG, STATE } from '../config/config.js';
 import { buildHierarchy } from '../ui/hierarchy.js';
 
 // ===== ENTITY SELECTION =====
@@ -93,8 +92,8 @@ import { buildHierarchy } from '../ui/hierarchy.js';
  */
 export function selectEntity(type, id) {
     // Step 1: Update the application state
-    STATE.selectedType = type;
-    STATE.selectedId = id;
+    window.STATE.selectedType = type;
+    window.STATE.selectedId = id;
 
     // Step 2: Clear all existing selection highlights in the hierarchy tree
     document.querySelectorAll('.tree-item').forEach(item => item.classList.remove('selected'));
@@ -174,8 +173,8 @@ export function selectEntity(type, id) {
  */
 export function deselectEntity() {
     // Step 1: Clear the selection state
-    STATE.selectedType = null;
-    STATE.selectedId = null;
+    window.STATE.selectedType = null;
+    window.STATE.selectedId = null;
 
     // Step 2: Update the canvas info bar
     document.getElementById('canvas-info-selected').textContent = 'Selected: None';
@@ -264,12 +263,12 @@ export function getEntity(type, id) {
     // Map of entity types to their corresponding CONFIG arrays
     // This provides O(1) lookup instead of multiple if statements
     const collections = {
-        'cart': CONFIG.carts,
-        'cameraview': CONFIG.cameraViews,
-        'scenario': CONFIG.scenarios,
-        'drawer': CONFIG.drawers,
-        'item': CONFIG.items,
-        'achievement': CONFIG.achievements
+        'cart': window.CONFIG.carts,
+        'cameraview': window.CONFIG.cameraViews,
+        'scenario': window.CONFIG.scenarios,
+        'drawer': window.CONFIG.drawers,
+        'item': window.CONFIG.items,
+        'achievement': window.CONFIG.achievements
     };
 
     // Use optional chaining to safely access the collection and find the entity

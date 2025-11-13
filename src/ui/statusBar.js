@@ -72,32 +72,32 @@ export function updateStatusBar() {
     // Filter out inventory carts (procedure tables) from the count
     // Only equipment carts are counted for the status display
     document.getElementById('status-carts').textContent =
-        CONFIG.carts.filter(c => !c.isInventory).length;
+        window.CONFIG.carts.filter(c => !c.isInventory).length;
 
     // Update cameras counter
     // Counts all defined camera view presets
     document.getElementById('status-cameras').textContent =
-        CONFIG.cameraViews.length;
+        window.CONFIG.cameraViews.length;
 
     // Update scenarios counter
     // Counts all training scenarios
     document.getElementById('status-scenarios').textContent =
-        CONFIG.scenarios.length;
+        window.CONFIG.scenarios.length;
 
     // Update drawers counter
     // Counts all drawers across all carts
     document.getElementById('status-drawers').textContent =
-        CONFIG.drawers.length;
+        window.CONFIG.drawers.length;
 
     // Update items counter
     // Counts all items in the inventory
     document.getElementById('status-items').textContent =
-        CONFIG.items.length;
+        window.CONFIG.items.length;
 
     // Update achievements counter
     // Counts all unlockable achievements
     document.getElementById('status-achievements').textContent =
-        CONFIG.achievements.length;
+        window.CONFIG.achievements.length;
 }
 
 /**

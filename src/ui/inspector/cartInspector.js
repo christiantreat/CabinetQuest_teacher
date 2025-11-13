@@ -100,8 +100,8 @@ export function buildCartInspector(cart, container) {
     // Calculate position in feet from room center
     // Room center is (0.5, 0.5) in normalized coordinates
     // Room dimensions are in feet, so we convert to feet-based position
-    const roomWidth = CONFIG.roomSettings.width;
-    const roomDepth = CONFIG.roomSettings.depth;
+    const roomWidth = window.CONFIG.roomSettings.width;
+    const roomDepth = window.CONFIG.roomSettings.depth;
     const posXFeet = ((cart.x - 0.5) * roomWidth).toFixed(2);
     const posYFeet = ((cart.y - 0.5) * roomDepth).toFixed(2);
 

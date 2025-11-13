@@ -40,7 +40,7 @@ import { loadDefaultConfiguration } from '../config/defaultData.js';
  * @see {@link loadConfiguration} for the corresponding load function
  */
 export function saveConfiguration() {
-    localStorage.setItem('traumaRoomConfig', JSON.stringify(CONFIG));
+    localStorage.setItem('traumaRoomConfig', JSON.stringify(window.CONFIG));
 }
 
 /**
@@ -67,7 +67,7 @@ export function saveAll() {
     saveConfiguration();
 
     // Clear the unsaved changes flag
-    STATE.unsavedChanges = false;
+    window.STATE.unsavedChanges = false;
 
     // Update status bar with save timestamp
     document.getElementById('status-message').textContent = 'Saved at ' + new Date().toLocaleTimeString();
@@ -110,25 +110,25 @@ export function loadConfiguration() {
 
         // Merge loaded config with default structure to ensure all properties exist
         // This defensive approach prevents errors if the saved config is missing properties
-        CONFIG.carts = loadedConfig.carts || [];
-        CONFIG.drawers = loadedConfig.drawers || [];
-        CONFIG.items = loadedConfig.items || [];
-        CONFIG.scenarios = loadedConfig.scenarios || [];
-        CONFIG.achievements = loadedConfig.achievements || [];
-        CONFIG.cameraViews = loadedConfig.cameraViews || [];
+        window.CONFIG.carts = loadedConfig.carts || [];
+        window.CONFIG.drawers = loadedConfig.drawers || [];
+        window.CONFIG.items = loadedConfig.items || [];
+        window.CONFIG.scenarios = loadedConfig.scenarios || [];
+        window.CONFIG.achievements = loadedConfig.achievements || [];
+        window.CONFIG.cameraViews = loadedConfig.cameraViews || [];
 
         // Settings objects with fallbacks to current CONFIG values
-        CONFIG.roomSettings = loadedConfig.roomSettings || CONFIG.roomSettings;
-        CONFIG.scoringRules = loadedConfig.scoringRules || CONFIG.scoringRules;
-        CONFIG.generalSettings = loadedConfig.generalSettings || CONFIG.generalSettings;
+        window.CONFIG.roomSettings = loadedConfig.roomSettings || window.CONFIG.roomSettings;
+        window.CONFIG.scoringRules = loadedConfig.scoringRules || window.CONFIG.scoringRules;
+        window.CONFIG.generalSettings = loadedConfig.generalSettings || window.CONFIG.generalSettings;
     } else {
         // No saved configuration found - initialize with defaults
-        loadDefaultConfiguration(CONFIG);
+        loadDefaultConfiguration(window.CONFIG);
     }
 
     // Update UI elements to reflect loaded settings
     // Note: Assumes the element exists; add error handling if needed
-    document.getElementById('room-bg-color').value = CONFIG.roomSettings.backgroundColor;
+    document.getElementById('room-bg-color').value = window.CONFIG.roomSettings.backgroundColor;
 }
 
 /**

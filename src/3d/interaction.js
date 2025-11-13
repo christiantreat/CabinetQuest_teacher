@@ -32,7 +32,7 @@
  * @module 3d/interaction
  */
 
-import { STATE, CONFIG } from '../config/config.js';
+
 import { FINE_GRID_SIZE } from '../config/constants.js';
 import {
     scene,
@@ -154,7 +154,7 @@ export function init3DInteraction() {
  */
 export function onThreeMouseDown(event) {
     // Only process clicks when in room view mode
-    if (STATE.canvasMode !== 'room') return;
+    if (window.STATE.canvasMode !== 'room') return;
 
     // Calculate mouse position in normalized device coordinates (-1 to +1)
     const rect = renderer.domElement.getBoundingClientRect();
@@ -254,7 +254,7 @@ export function onThreeMouseDown(event) {
  * - Triggers UI updates (canvas redraw, inspector update)
  *
  * Grid snapping:
- * If STATE.snapToGrid is enabled, cart position snaps to FINE_GRID_SIZE
+ * If window.STATE.snapToGrid is enabled, cart position snaps to FINE_GRID_SIZE
  * intervals (0.25 feet / 3 inches) for precise alignment.
  *
  * Coordinate conversion:
@@ -285,7 +285,7 @@ export function onThreeMouseMove(event) {
         selectedCart3D.position.z = point.z;
 
         // Apply grid snapping if enabled
-        if (STATE.snapToGrid) {
+        if (window.STATE.snapToGrid) {
             const gridSize = FINE_GRID_SIZE; // 0.25 feet (3 inches)
             selectedCart3D.position.x = Math.round(point.x / gridSize) * gridSize;
             selectedCart3D.position.z = Math.round(point.z / gridSize) * gridSize;
@@ -295,13 +295,13 @@ export function onThreeMouseMove(event) {
         const cart = getEntity('cart', selectedCart3D.userData.cartId);
         if (cart) {
             // Convert 3D feet coordinates to normalized 0-1 coordinates
-            const roomWidth = CONFIG.roomSettings.width;
-            const roomDepth = CONFIG.roomSettings.depth;
+            const roomWidth = window.CONFIG.roomSettings.width;
+            const roomDepth = window.CONFIG.roomSettings.depth;
             cart.x = (selectedCart3D.position.x / roomWidth) + 0.5;
             cart.y = (selectedCart3D.position.z / roomDepth) + 0.5;
 
             // Mark as unsaved
-            STATE.unsavedChanges = true;
+            window.STATE.unsavedChanges = true;
 
             // Update 2D view and inspector (requires external functions)
             if (typeof drawCanvas === 'function') {
@@ -402,9 +402,9 @@ function getEntity(type, id) {
 
     // Fallback: search CONFIG directly
     if (type === 'cart') {
-        return CONFIG.carts.find(c => c.id === id) || null;
+        return window.CONFIG.carts.find(c => c.id === id) || null;
     } else if (type === 'drawer') {
-        return CONFIG.drawers.find(d => d.id === id) || null;
+        return window.CONFIG.drawers.find(d => d.id === id) || null;
     }
 
     return null;

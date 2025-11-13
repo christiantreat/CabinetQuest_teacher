@@ -79,49 +79,49 @@
  */
 export function deleteCurrentEntity() {
     // Validate that an entity is selected
-    if (!STATE.selectedType || !STATE.selectedId) return;
+    if (!window.STATE.selectedType || !window.STATE.selectedId) return;
 
     // Get the entity to show its name in confirmation
-    const entity = getEntity(STATE.selectedType, STATE.selectedId);
-    if (!confirm(`Are you sure you want to delete ${entity?.name || STATE.selectedId}?`)) {
+    const entity = getEntity(window.STATE.selectedType, window.STATE.selectedId);
+    if (!confirm(`Are you sure you want to delete ${entity?.name || window.STATE.selectedId}?`)) {
         return;
     }
 
     // Map entity types to their collections
     const collections = {
-        'cart': CONFIG.carts,
-        'cameraview': CONFIG.cameraViews,
-        'scenario': CONFIG.scenarios,
-        'drawer': CONFIG.drawers,
-        'item': CONFIG.items,
-        'achievement': CONFIG.achievements
+        'cart': window.CONFIG.carts,
+        'cameraview': window.CONFIG.cameraViews,
+        'scenario': window.CONFIG.scenarios,
+        'drawer': window.CONFIG.drawers,
+        'item': window.CONFIG.items,
+        'achievement': window.CONFIG.achievements
     };
 
     // Get the collection for this entity type
-    const collection = collections[STATE.selectedType];
-    const index = collection.findIndex(e => e.id === STATE.selectedId);
+    const collection = collections[window.STATE.selectedType];
+    const index = collection.findIndex(e => e.id === window.STATE.selectedId);
 
     if (index > -1) {
         const deletedEntity = collection[index];
 
         // Record for undo/redo with special handling for specific entity types
-        if (STATE.selectedType === 'cart') {
+        if (window.STATE.selectedType === 'cart') {
             // For carts, also save drawers that belong to this cart
             // This enables proper undo functionality (restoring cart with its drawers)
-            const cartDrawers = CONFIG.drawers.filter(d => d.cart === STATE.selectedId);
+            const cartDrawers = window.CONFIG.drawers.filter(d => d.cart === window.STATE.selectedId);
             recordAction('DELETE_CART', {
-                cartId: STATE.selectedId,
+                cartId: window.STATE.selectedId,
                 cart: deletedEntity,
                 drawers: cartDrawers
             });
-        } else if (STATE.selectedType === 'drawer') {
+        } else if (window.STATE.selectedType === 'drawer') {
             recordAction('DELETE_DRAWER', {
-                drawerId: STATE.selectedId,
+                drawerId: window.STATE.selectedId,
                 drawer: deletedEntity
             });
-        } else if (STATE.selectedType === 'item') {
+        } else if (window.STATE.selectedType === 'item') {
             recordAction('DELETE_ITEM', {
-                itemId: STATE.selectedId,
+                itemId: window.STATE.selectedId,
                 item: deletedEntity
             });
         }
@@ -131,18 +131,18 @@ export function deleteCurrentEntity() {
         collection.splice(index, 1);
 
         // Update application state
-        STATE.unsavedChanges = true;
+        window.STATE.unsavedChanges = true;
         deselectEntity();
         buildHierarchy();
         updateStatusBar();
         drawCanvas();
 
         // If cart was deleted, rebuild 3D scene to remove its visualization
-        if (STATE.selectedType === 'cart') {
+        if (window.STATE.selectedType === 'cart') {
             buildAll3DCarts();
         }
 
         // Show success message
-        showAlert(`${STATE.selectedType} deleted`, 'success');
+        showAlert(`${window.STATE.selectedType} deleted`, 'success');
     }
 }

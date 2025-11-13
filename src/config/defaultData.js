@@ -439,15 +439,15 @@ export const DEFAULT_GENERAL_SETTINGS = {
  * @param {Object} CONFIG - The global configuration object to populate
  */
 export function loadDefaultConfiguration(CONFIG) {
-    CONFIG.carts = [...DEFAULT_CARTS];
-    CONFIG.drawers = [...DEFAULT_DRAWERS];
-    CONFIG.items = [...DEFAULT_ITEMS];
-    CONFIG.scenarios = [...DEFAULT_SCENARIOS];
-    CONFIG.achievements = [...DEFAULT_ACHIEVEMENTS];
-    CONFIG.cameraViews = [...DEFAULT_CAMERA_VIEWS];
-    CONFIG.roomSettings = { ...DEFAULT_ROOM_SETTINGS };
-    CONFIG.scoringRules = { ...DEFAULT_SCORING_RULES };
-    CONFIG.generalSettings = { ...DEFAULT_GENERAL_SETTINGS };
+    window.CONFIG.carts = [...DEFAULT_CARTS];
+    window.CONFIG.drawers = [...DEFAULT_DRAWERS];
+    window.CONFIG.items = [...DEFAULT_ITEMS];
+    window.CONFIG.scenarios = [...DEFAULT_SCENARIOS];
+    window.CONFIG.achievements = [...DEFAULT_ACHIEVEMENTS];
+    window.CONFIG.cameraViews = [...DEFAULT_CAMERA_VIEWS];
+    window.CONFIG.roomSettings = { ...DEFAULT_ROOM_SETTINGS };
+    window.CONFIG.scoringRules = { ...DEFAULT_SCORING_RULES };
+    window.CONFIG.generalSettings = { ...DEFAULT_GENERAL_SETTINGS };
 }
 
 /**

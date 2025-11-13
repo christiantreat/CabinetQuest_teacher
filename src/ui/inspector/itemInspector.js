@@ -93,14 +93,14 @@ export function buildItemInspector(item, container) {
     // Build cart selection dropdown
     // Filter out inventory cart as items in game drawers shouldn't be in inventory
     // Generate option elements with selection state
-    const cartOptions = CONFIG.carts.filter(c => !c.isInventory).map(c =>
+    const cartOptions = window.CONFIG.carts.filter(c => !c.isInventory).map(c =>
         `<option value="${c.id}" ${item.cart === c.id ? 'selected' : ''}>${c.name}</option>`
     ).join('');
 
     // Build drawer selection dropdown
     // Only show drawers that belong to the currently selected cart
     // This creates a cascading selection: pick cart first, then drawer
-    const drawerOptions = CONFIG.drawers.filter(d => d.cart === item.cart).map(d =>
+    const drawerOptions = window.CONFIG.drawers.filter(d => d.cart === item.cart).map(d =>
         `<option value="${d.id}" ${item.drawer === d.id ? 'selected' : ''}>${d.name}</option>`
     ).join('');
 
@@ -198,7 +198,7 @@ export function buildItemInspector(item, container) {
  *
  * @example
  * // Handle empty item list
- * CONFIG.items = [];
+ * window.CONFIG.items = [];
  * const html = buildItemMultiselect([], 'essential');
  * // Returns: '<div class="item-multiselect-empty">No items available. Create items first!</div>'
  *
@@ -214,14 +214,14 @@ export function buildItemInspector(item, container) {
  */
 export function buildItemMultiselect(selectedIds, type) {
     // Check if there are any items available to select
-    if (CONFIG.items.length === 0) {
+    if (window.CONFIG.items.length === 0) {
         return '<div class="item-multiselect-empty">No items available. Create items first!</div>';
     }
 
     // Map each item to a clickable chip element
     // Apply 'selected' class if item is in selectedIds array
     // Each chip calls toggleScenarioItem when clicked to toggle selection
-    return CONFIG.items.map(item => {
+    return window.CONFIG.items.map(item => {
         const isSelected = selectedIds.includes(item.id);
         return `<div class="item-multiselect-item ${isSelected ? 'selected' : ''}"
                      onclick="toggleScenarioItem('${type}', '${item.id}')">
