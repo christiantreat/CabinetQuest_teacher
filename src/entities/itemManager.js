@@ -11,17 +11,18 @@
  */
 
 // Import required globals and helper functions
-const CONFIG = window.CONFIG;
-const STATE = window.STATE;
-const getEntity = window.getEntity;
-const recordAction = window.recordAction;
-const buildHierarchy = window.buildHierarchy;
-const drawCanvas = window.drawCanvas;
-const buildAll3DCarts = window.buildAll3DCarts;
-const updateInspector = window.updateInspector;
-const selectEntity = window.selectEntity;
-const showAlert = window.showAlert;
-const updateStatusBar = window.updateStatusBar;
+// Note: These are accessed via window to avoid undefined values during module load
+// when window properties haven not been set yet
+
+
+
+
+
+
+
+
+
+
 
 // ========================================
 // ITEM PROPERTY UPDATES
@@ -60,23 +61,23 @@ const updateStatusBar = window.updateStatusBar;
  * updateItemProperty('drawer', 'drawer_1234567890');
  */
 export function updateItemProperty(prop, value) {
-    const item = getEntity('item', STATE.selectedId);
+    const item = window.getEntity('item', window.STATE.selectedId);
     if (item) {
         const oldValue = item[prop];
         item[prop] = value;
-        STATE.unsavedChanges = true;
+        window.STATE.unsavedChanges = true;
 
         // Record action for undo/redo
-        recordAction('UPDATE_ITEM_PROPERTY', {
+        window.recordAction('UPDATE_ITEM_PROPERTY', {
             itemId: item.id,
             property: prop,
             oldValue: oldValue,
             newValue: value
         });
 
-        buildHierarchy();
-        drawCanvas(); // Update 2D room layout view
-        buildAll3DCarts(); // Update 3D view
+        window.buildHierarchy();
+        window.drawCanvas(); // Update 2D room layout view
+        window.buildAll3DCarts(); // Update 3D view
     }
 }
 
@@ -98,15 +99,15 @@ export function updateItemProperty(prop, value) {
  * // Result: Item is moved to the cart, drawer is reset, drawer dropdown updates
  */
 export function updateItemCart(cartId) {
-    const item = getEntity('item', STATE.selectedId);
+    const item = window.getEntity('item', window.STATE.selectedId);
     if (item) {
         item.cart = cartId;
         item.drawer = ''; // Reset drawer when cart changes
-        STATE.unsavedChanges = true;
+        window.STATE.unsavedChanges = true;
 
         // Update drawer dropdown to show only drawers from the selected cart
         const drawerSelect = document.getElementById('item-drawer-select');
-        const drawerOptions = CONFIG.drawers.filter(d => d.cart === cartId).map(d =>
+        const drawerOptions = window.CONFIG.drawers.filter(d => d.cart === cartId).map(d =>
             `<option value="${d.id}">${d.name}</option>`
         ).join('');
         drawerSelect.innerHTML = '<option value="">Select drawer...</option>' + drawerOptions;
@@ -145,7 +146,7 @@ export function updateItemCart(cartId) {
  * toggleScenarioItem('optional', 'item_9876543210');
  */
 export function toggleScenarioItem(type, itemId) {
-    const scenario = getEntity('scenario', STATE.selectedId);
+    const scenario = window.getEntity('scenario', window.STATE.selectedId);
     if (!scenario) return;
 
     const listName = type === 'essential' ? 'essential' : 'optional';
@@ -160,8 +161,8 @@ export function toggleScenarioItem(type, itemId) {
         scenario[listName].push(itemId);
     }
 
-    STATE.unsavedChanges = true;
-    updateInspector();
+    window.STATE.unsavedChanges = true;
+    window.updateInspector();
 }
 
 // ========================================
@@ -198,11 +199,11 @@ export function handleItemImageUpload(event) {
 
     const reader = new FileReader();
     reader.onload = (e) => {
-        const item = getEntity('item', STATE.selectedId);
+        const item = window.getEntity('item', window.STATE.selectedId);
         if (item) {
             item.image = e.target.result;
-            STATE.unsavedChanges = true;
-            updateInspector();
+            window.STATE.unsavedChanges = true;
+            window.updateInspector();
         }
     };
     reader.readAsDataURL(file);
@@ -224,7 +225,7 @@ export function handleItemImageUpload(event) {
  *
  * The function:
  * 1. Creates the item object
- * 2. Adds it to CONFIG.items
+ * 2. Adds it to window.CONFIG.items
  * 3. Records the action for undo/redo
  * 4. Updates all UI elements
  * 5. Selects the new item
@@ -247,16 +248,16 @@ export function createNewItem() {
         description: ''
     };
 
-    CONFIG.items.push(newItem);
+    window.CONFIG.items.push(newItem);
 
     // Record for undo/redo
-    recordAction('CREATE_ITEM', { item: newItem });
+    window.recordAction('CREATE_ITEM', { item: newItem });
 
-    STATE.unsavedChanges = true;
-    buildHierarchy();
-    updateStatusBar();
-    selectEntity('item', id);
-    drawCanvas(); // Update 2D room layout view
-    buildAll3DCarts(); // Update 3D view
-    showAlert('New item created', 'success');
+    window.STATE.unsavedChanges = true;
+    window.buildHierarchy();
+    window.updateStatusBar();
+    window.selectEntity('item', id);
+    window.drawCanvas(); // Update 2D room layout view
+    window.buildAll3DCarts(); // Update 3D view
+    window.showAlert('New item created', 'success');
 }

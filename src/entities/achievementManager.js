@@ -10,14 +10,15 @@
  */
 
 // Import required globals and helper functions
-const CONFIG = window.CONFIG;
-const STATE = window.STATE;
-const getEntity = window.getEntity;
-const recordAction = window.recordAction;
-const buildHierarchy = window.buildHierarchy;
-const selectEntity = window.selectEntity;
-const showAlert = window.showAlert;
-const updateStatusBar = window.updateStatusBar;
+// Note: These are accessed via window to avoid undefined values during module load
+// when window properties haven not been set yet
+
+
+
+
+
+
+
 
 // ========================================
 // ACHIEVEMENT PROPERTY UPDATES
@@ -71,21 +72,21 @@ const updateStatusBar = window.updateStatusBar;
  * updateAchievementProperty('value', 5); // Complete 5 scenarios
  */
 export function updateAchievementProperty(prop, value) {
-    const achievement = getEntity('achievement', STATE.selectedId);
+    const achievement = window.getEntity('achievement', window.STATE.selectedId);
     if (achievement) {
         const oldValue = achievement[prop];
         achievement[prop] = value;
-        STATE.unsavedChanges = true;
+        window.STATE.unsavedChanges = true;
 
         // Record action for undo/redo
-        recordAction('UPDATE_ACHIEVEMENT_PROPERTY', {
+        window.recordAction('UPDATE_ACHIEVEMENT_PROPERTY', {
             achievementId: achievement.id,
             property: prop,
             oldValue: oldValue,
             newValue: value
         });
 
-        buildHierarchy();
+        window.buildHierarchy();
     }
 }
 
@@ -106,7 +107,7 @@ export function updateAchievementProperty(prop, value) {
  *
  * The function:
  * 1. Creates the achievement object
- * 2. Adds it to CONFIG.achievements
+ * 2. Adds it to window.CONFIG.achievements
  * 3. Updates the unsaved changes flag
  * 4. Rebuilds the hierarchy UI
  * 5. Updates the status bar
@@ -141,10 +142,10 @@ export function createNewAchievement() {
         value: 0
     };
 
-    CONFIG.achievements.push(newAchievement);
-    STATE.unsavedChanges = true;
-    buildHierarchy();
-    updateStatusBar();
-    selectEntity('achievement', id);
-    showAlert('New achievement created', 'success');
+    window.CONFIG.achievements.push(newAchievement);
+    window.STATE.unsavedChanges = true;
+    window.buildHierarchy();
+    window.updateStatusBar();
+    window.selectEntity('achievement', id);
+    window.showAlert('New achievement created', 'success');
 }
