@@ -6,14 +6,20 @@
  * This module handles 3D user interaction including:
  * - Raycasting for object picking
  * - Mouse event handling (down, move, up)
+ * - Touch event handling for mobile/tablet devices
  * - Drag-and-drop cart positioning in 3D space
  * - Coordinate conversion between 2D canvas and 3D space
  * - Orbit control management during interactions
  *
- * The interaction system uses Three.js raycasting to detect clicks on
+ * The interaction system uses Three.js raycasting to detect clicks/taps on
  * carts and drawers, allowing users to select and manipulate them in
  * the 3D view. During drag operations, carts can be repositioned with
  * optional grid snapping.
+ *
+ * Touch Support:
+ * - Single-touch: Cart/drawer selection and dragging
+ * - Multi-touch: Passed to OrbitControls for camera zoom/pan
+ * - Touch tracking prevents interference between interaction and camera control
  *
  * Dependencies:
  * - Three.js library (THREE global)
@@ -28,6 +34,9 @@
  * - onThreeMouseDown(): Handle mouse down events
  * - onThreeMouseMove(): Handle mouse move events (dragging)
  * - onThreeMouseUp(): Handle mouse up events
+ * - onThreeTouchStart(): Handle touch start events
+ * - onThreeTouchMove(): Handle touch move events
+ * - onThreeTouchEnd(): Handle touch end/cancel events
  *
  * @module 3d/interaction
  */
@@ -121,7 +130,13 @@ export function init3DInteraction() {
     renderer.domElement.addEventListener('mousemove', onThreeMouseMove);
     renderer.domElement.addEventListener('mouseup', onThreeMouseUp);
 
-    console.log('✓ 3D interaction enabled');
+    // Attach touch event listeners for mobile/tablet support
+    renderer.domElement.addEventListener('touchstart', onThreeTouchStart, { passive: false });
+    renderer.domElement.addEventListener('touchmove', onThreeTouchMove, { passive: false });
+    renderer.domElement.addEventListener('touchend', onThreeTouchEnd);
+    renderer.domElement.addEventListener('touchcancel', onThreeTouchEnd);
+
+    console.log('✓ 3D interaction enabled (mouse + touch)');
 }
 
 // ===== MOUSE EVENT HANDLERS =====
@@ -378,6 +393,123 @@ export function onThreeMouseUp(event) {
         if (controls && controls.enabled !== undefined) {
             controls.enabled = true;
         }
+    }
+}
+
+// ===== TOUCH EVENT HANDLERS =====
+
+/**
+ * Track the active touch for cart dragging
+ * @type {number|null}
+ */
+let activeTouchId = null;
+
+/**
+ * Handle touch start events in 3D view
+ *
+ * Converts touch events to mouse-like coordinates and delegates
+ * to the existing mouse handler. Supports single-touch interaction
+ * for cart selection and dragging.
+ *
+ * Multi-touch behavior:
+ * - First touch: Handled as primary interaction (cart selection/drag)
+ * - Additional touches: Ignored, allowing OrbitControls to handle zoom/pan
+ *
+ * @param {TouchEvent} event - Browser touch event
+ * @returns {void}
+ */
+export function onThreeTouchStart(event) {
+    // Only handle single touch for interaction
+    // OrbitControls will handle multi-touch for camera control
+    if (event.touches.length === 1) {
+        const touch = event.touches[0];
+        activeTouchId = touch.identifier;
+
+        // Convert touch event to mouse-like event
+        const mouseEvent = {
+            clientX: touch.clientX,
+            clientY: touch.clientY
+        };
+
+        // Delegate to mouse handler
+        onThreeMouseDown(mouseEvent);
+
+        // Prevent default only if we're dragging something
+        // This allows OrbitControls to work when not dragging
+        if (selectedCart3D) {
+            event.preventDefault();
+        }
+    }
+}
+
+/**
+ * Handle touch move events in 3D view
+ *
+ * Converts active touch to mouse-like coordinates for cart dragging.
+ * Only processes the touch that initiated the drag operation.
+ *
+ * @param {TouchEvent} event - Browser touch event
+ * @returns {void}
+ */
+export function onThreeTouchMove(event) {
+    // Only process if we have an active touch
+    if (activeTouchId === null) return;
+
+    // Find the active touch
+    for (let i = 0; i < event.touches.length; i++) {
+        const touch = event.touches[i];
+        if (touch.identifier === activeTouchId) {
+            // Convert touch event to mouse-like event
+            const mouseEvent = {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            };
+
+            // Delegate to mouse handler
+            onThreeMouseMove(mouseEvent);
+
+            // Prevent scrolling while dragging
+            if (selectedCart3D) {
+                event.preventDefault();
+            }
+            break;
+        }
+    }
+}
+
+/**
+ * Handle touch end/cancel events in 3D view
+ *
+ * Completes the touch interaction and clears active touch tracking.
+ *
+ * @param {TouchEvent} event - Browser touch event
+ * @returns {void}
+ */
+export function onThreeTouchEnd(event) {
+    // Only process if we have an active touch
+    if (activeTouchId === null) return;
+
+    // Check if the active touch ended
+    let touchEnded = true;
+    for (let i = 0; i < event.touches.length; i++) {
+        if (event.touches[i].identifier === activeTouchId) {
+            touchEnded = false;
+            break;
+        }
+    }
+
+    if (touchEnded) {
+        // Convert to mouse-like event (use last known position or center)
+        const mouseEvent = {
+            clientX: 0,
+            clientY: 0
+        };
+
+        // Delegate to mouse handler
+        onThreeMouseUp(mouseEvent);
+
+        // Clear active touch
+        activeTouchId = null;
     }
 }
 
