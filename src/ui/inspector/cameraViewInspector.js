@@ -224,12 +224,12 @@ export function calculateCameraRotationData(view) {
 export function buildCameraViewInspector(view, container) {
     // Build cart selection dropdown for optional targeting
     // Filter out inventory cart as it's not relevant for student views
-    const cartOptions = CONFIG.carts.filter(c => !c.isInventory).map(c =>
+    const cartOptions = window.CONFIG.carts.filter(c => !c.isInventory).map(c =>
         `<option value="${c.id}" ${view.targetCart === c.id ? 'selected' : ''}>${c.name}</option>`
     ).join('');
 
     // Build drawer selection dropdown for optional targeting
-    const drawerOptions = CONFIG.drawers.map(d =>
+    const drawerOptions = window.CONFIG.drawers.map(d =>
         `<option value="${d.id}" ${view.targetDrawer === d.id ? 'selected' : ''}>${d.name}</option>`
     ).join('');
 

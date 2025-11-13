@@ -84,7 +84,7 @@ export function buildDrawerInspector(drawer, container) {
     // Build cart selection dropdown
     // Filter out inventory cart as it doesn't use drawers
     // Generate option elements with selection state
-    const cartOptions = CONFIG.carts.filter(c => !c.isInventory).map(c =>
+    const cartOptions = window.CONFIG.carts.filter(c => !c.isInventory).map(c =>
         `<option value="${c.id}" ${drawer.cart === c.id ? 'selected' : ''}>${c.name}</option>`
     ).join('');
 
