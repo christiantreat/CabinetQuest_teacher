@@ -311,6 +311,29 @@
         #room-canvas {
             cursor: crosshair;
             box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            /* Touch-friendly interactions */
+            touch-action: none; /* Disable browser touch gestures, let Three.js handle */
+            -webkit-user-select: none; /* Prevent text selection on touch */
+            user-select: none;
+        }
+
+        /* Touch-specific styles for mobile */
+        @media (hover: none) and (pointer: coarse) {
+            #room-canvas {
+                cursor: default; /* Use default cursor on touch devices */
+            }
+
+            /* Make buttons and controls larger for touch */
+            .toolbar-btn,
+            .canvas-mode-btn {
+                min-height: 44px; /* iOS recommended touch target size */
+                padding: 8px 16px;
+            }
+
+            .panel-header-btn {
+                min-width: 44px;
+                min-height: 44px;
+            }
         }
 
         .canvas-info {
@@ -844,7 +867,7 @@
             </div>
             <div class="canvas-container">
                 <canvas id="room-canvas" width="800" height="600"></canvas>
-                <div id="three-container" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></div>
+                <div id="three-container" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: auto; touch-action: none;"></div>
                 <div class="canvas-info">
                     <span id="canvas-info-mode">Mode: Room Layout</span>
                     <span id="canvas-info-selected">Selected: None</span>
@@ -942,6 +965,12 @@
                 this.enableDamping = false;
                 this.dampingFactor = 0.05;
 
+                // Touch-optimized settings
+                this.enablePan = true;
+                this.panSpeed = 1.0;
+                this.rotateSpeed = 1.0;
+                this.zoomSpeed = 1.2;
+
                 var scope = this;
                 var STATE = { NONE: -1, ROTATE: 0, DOLLY: 1, PAN: 2 };
                 var state = STATE.NONE;
@@ -955,6 +984,13 @@
                 var rotateEnd = new THREE.Vector2();
                 var panStart = new THREE.Vector2();
                 var panEnd = new THREE.Vector2();
+
+                // Touch support
+                var touchStart = new THREE.Vector2();
+                var touchEnd = new THREE.Vector2();
+                var touch2Start = new THREE.Vector2();
+                var touch2End = new THREE.Vector2();
+                var lastTouchDistance = 0;
 
                 this.update = function() {
                     var offset = new THREE.Vector3();
@@ -1043,8 +1079,84 @@
                     scope.update();
                 }
 
+                // Touch event handlers
+                function onTouchStart(event) {
+                    if (!scope.enabled) return;
+
+                    if (event.touches.length === 1) {
+                        // Single touch - rotate
+                        state = STATE.ROTATE;
+                        touchStart.set(event.touches[0].pageX, event.touches[0].pageY);
+                    } else if (event.touches.length === 2) {
+                        // Two touches - pan and zoom
+                        state = STATE.DOLLY;
+                        var dx = event.touches[0].pageX - event.touches[1].pageX;
+                        var dy = event.touches[0].pageY - event.touches[1].pageY;
+                        lastTouchDistance = Math.sqrt(dx * dx + dy * dy);
+
+                        // Store pan start position (midpoint between touches)
+                        touchStart.set(
+                            (event.touches[0].pageX + event.touches[1].pageX) / 2,
+                            (event.touches[0].pageY + event.touches[1].pageY) / 2
+                        );
+                    }
+                }
+
+                function onTouchMove(event) {
+                    if (!scope.enabled) return;
+                    event.preventDefault();
+
+                    if (event.touches.length === 1 && state === STATE.ROTATE) {
+                        // Single touch - rotate
+                        touchEnd.set(event.touches[0].pageX, event.touches[0].pageY);
+                        var rotateDelta = new THREE.Vector2().subVectors(touchEnd, touchStart).multiplyScalar(0.01);
+                        sphericalDelta.theta -= 2 * Math.PI * rotateDelta.x / scope.domElement.clientHeight;
+                        sphericalDelta.phi -= 2 * Math.PI * rotateDelta.y / scope.domElement.clientHeight;
+                        touchStart.copy(touchEnd);
+                        scope.update();
+                    } else if (event.touches.length === 2) {
+                        // Two touches - zoom and pan
+                        var dx = event.touches[0].pageX - event.touches[1].pageX;
+                        var dy = event.touches[0].pageY - event.touches[1].pageY;
+                        var distance = Math.sqrt(dx * dx + dy * dy);
+
+                        // Zoom (pinch)
+                        if (lastTouchDistance > 0) {
+                            if (distance > lastTouchDistance) {
+                                scale /= 1.05;
+                            } else if (distance < lastTouchDistance) {
+                                scale *= 1.05;
+                            }
+                        }
+                        lastTouchDistance = distance;
+
+                        // Pan (two-finger drag)
+                        touchEnd.set(
+                            (event.touches[0].pageX + event.touches[1].pageX) / 2,
+                            (event.touches[0].pageY + event.touches[1].pageY) / 2
+                        );
+                        var panDelta = new THREE.Vector2().subVectors(touchEnd, touchStart).multiplyScalar(0.01);
+                        var offset = new THREE.Vector3().copy(scope.camera.position).sub(scope.target);
+                        var targetDistance = offset.length() * Math.tan((scope.camera.fov / 2) * Math.PI / 180.0);
+                        panOffset.x -= 2 * panDelta.x * targetDistance / scope.domElement.clientHeight;
+                        panOffset.y += 2 * panDelta.y * targetDistance / scope.domElement.clientHeight;
+                        touchStart.copy(touchEnd);
+
+                        scope.update();
+                    }
+                }
+
+                function onTouchEnd(event) {
+                    if (!scope.enabled) return;
+                    state = STATE.NONE;
+                    lastTouchDistance = 0;
+                }
+
                 this.domElement.addEventListener('mousedown', onMouseDown);
                 this.domElement.addEventListener('wheel', onMouseWheel);
+                this.domElement.addEventListener('touchstart', onTouchStart, { passive: false });
+                this.domElement.addEventListener('touchmove', onTouchMove, { passive: false });
+                this.domElement.addEventListener('touchend', onTouchEnd);
                 this.domElement.addEventListener('contextmenu', function(e) { e.preventDefault(); });
                 this.update();
             };

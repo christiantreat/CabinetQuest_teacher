@@ -230,13 +230,29 @@ export function createOrbitControls() {
     // Prevent camera from going below ground
     controls.maxPolarAngle = Math.PI / 2 - 0.1; // 89 degrees (0.1 rad = ~5.7°)
 
+    // Touch-optimized settings for mobile/tablet
+    controls.enablePan = true; // Enable two-finger pan on touch devices
+    controls.panSpeed = 1.0; // Standard pan speed
+    controls.rotateSpeed = 1.0; // Standard rotation speed
+    controls.zoomSpeed = 1.2; // Slightly faster zoom for touch (pinch-to-zoom)
+
+    // Touch-specific behavior
+    // OrbitControls automatically handles:
+    // - Single finger drag: Rotate camera
+    // - Two finger drag: Pan camera
+    // - Pinch: Zoom in/out
+    controls.touches = {
+        ONE: THREE.TOUCH.ROTATE,   // Single touch rotates
+        TWO: THREE.TOUCH.DOLLY_PAN // Two fingers zoom + pan
+    };
+
     // Initial update
     controls.update();
 
     // Store reference using setter
     setControls(controls);
 
-    console.log('✓ Orbit controls enabled');
+    console.log('✓ Orbit controls enabled (touch-optimized)');
 }
 
 // ===== ENHANCED ANIMATION LOOP =====
