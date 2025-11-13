@@ -82,7 +82,7 @@
  * @version 1.0.0
  */
 
-import { CONFIG, STATE } from '../config/config.js';
+
 import { showAlert } from './alerts.js';
 import { selectEntity } from '../core/state.js';
 
@@ -180,28 +180,28 @@ export function buildHierarchy() {
             id: 'cameraviews',        // ID used for selection type (minus the 's')
             name: 'Camera Views',      // Display name
             icon: '📷',                // Icon shown in tree
-            items: CONFIG.cameraViews, // Data array from CONFIG
+            items: window.CONFIG.cameraViews, // Data array from CONFIG
             createNew: typeof window.createNewCameraView === 'function' ? window.createNewCameraView : null
         },
         {
             id: 'scenarios',
             name: 'Scenarios',
             icon: '📋',
-            items: CONFIG.scenarios,
+            items: window.CONFIG.scenarios,
             createNew: typeof window.createNewScenario === 'function' ? window.createNewScenario : null
         },
         {
             id: 'items',
             name: 'Items',
             icon: '📦',
-            items: CONFIG.items,
+            items: window.CONFIG.items,
             createNew: typeof window.createNewItem === 'function' ? window.createNewItem : null
         },
         {
             id: 'achievements',
             name: 'Achievements',
             icon: '🏆',
-            items: CONFIG.achievements,
+            items: window.CONFIG.achievements,
             createNew: typeof window.createNewAchievement === 'function' ? window.createNewAchievement : null
         }
     ];
@@ -288,7 +288,7 @@ export function createCartsWithDrawersNode() {
     div.className = 'tree-category';
 
     // Step 2: Get the carts array (ensure it exists)
-    const carts = CONFIG.carts || [];
+    const carts = window.CONFIG.carts || [];
 
     // Step 3: Create the category header with icon, name, and count
     const header = document.createElement('div');
@@ -339,12 +339,12 @@ export function createCartsWithDrawersNode() {
         cartItem.className = 'tree-item';
 
         // Highlight the cart if it's currently selected
-        if (STATE.selectedType === 'cart' && STATE.selectedId === cart.id) {
+        if (window.STATE.selectedType === 'cart' && window.STATE.selectedId === cart.id) {
             cartItem.classList.add('selected');
         }
 
         // Find all drawers that belong to this cart
-        const cartDrawers = CONFIG.drawers.filter(d => d.cart === cart.id);
+        const cartDrawers = window.CONFIG.drawers.filter(d => d.cart === cart.id);
         const hasDrawers = cartDrawers.length > 0;
 
         // Build the cart item HTML with conditional expand icon and drawer count
@@ -397,7 +397,7 @@ export function createCartsWithDrawersNode() {
                     // Auto-assign the new drawer to this cart
                     // We do this in a timeout to allow the drawer to be created first
                     setTimeout(() => {
-                        const newDrawer = CONFIG.drawers[CONFIG.drawers.length - 1];
+                        const newDrawer = window.CONFIG.drawers[window.CONFIG.drawers.length - 1];
                         if (newDrawer && !newDrawer.cart) {
                             newDrawer.cart = cart.id;
                             console.log(`✓ [Hierarchy] Auto-assigned drawer ${newDrawer.id} to cart ${cart.id}`);
@@ -425,7 +425,7 @@ export function createCartsWithDrawersNode() {
                 drawerItem.style.fontSize = '11px'; // Slightly smaller for nested items
 
                 // Highlight drawer if it's currently selected
-                if (STATE.selectedType === 'drawer' && STATE.selectedId === drawer.id) {
+                if (window.STATE.selectedType === 'drawer' && window.STATE.selectedId === drawer.id) {
                     drawerItem.classList.add('selected');
                 }
 
@@ -585,7 +585,7 @@ export function createCategoryNode(category) {
         const entityType = category.id.slice(0, -1);
 
         // Highlight the item if it's currently selected
-        if (STATE.selectedType === entityType && STATE.selectedId === item.id) {
+        if (window.STATE.selectedType === entityType && window.STATE.selectedId === item.id) {
             itemDiv.classList.add('selected');
         }
 

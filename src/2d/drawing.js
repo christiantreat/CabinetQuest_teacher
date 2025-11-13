@@ -25,7 +25,7 @@
  * to the appropriate rendering function based on the current canvas mode.
  *
  * @function drawCanvas
- * @requires STATE.canvasMode - Current canvas display mode ('room' or 'overview')
+ * @requires window.STATE.canvasMode - Current canvas display mode ('room' or 'overview')
  *
  * @example
  * // Render the canvas based on current mode
@@ -61,10 +61,10 @@ export function drawCanvas() {
  * @function drawRoomCanvas
  * @requires canvas - Canvas DOM element
  * @requires ctx - 2D rendering context
- * @requires CONFIG.roomSettings.backgroundColor - Room background color
- * @requires CONFIG.carts - Array of cart objects to render
- * @requires STATE.selectedType - Currently selected entity type
- * @requires STATE.selectedId - Currently selected entity ID
+ * @requires window.CONFIG.roomSettings.backgroundColor - Room background color
+ * @requires window.CONFIG.carts - Array of cart objects to render
+ * @requires window.STATE.selectedType - Currently selected entity type
+ * @requires window.STATE.selectedId - Currently selected entity ID
  *
  * @example
  * // Render the room layout view
@@ -111,15 +111,15 @@ export function drawRoomCanvas() {
  *
  * Grid characteristics:
  * - Grid lines are semi-transparent gray
- * - Grid spacing is based on STATE.gridSize (in feet)
+ * - Grid spacing is based on window.STATE.gridSize (in feet)
  * - Automatically scales with room dimensions
  * - Covers entire canvas area
  *
  * @function drawGrid
  * @requires canvas - Canvas DOM element
  * @requires ctx - 2D rendering context
- * @requires STATE.gridSize - Grid spacing in feet
- * @requires CONFIG.roomSettings.pixelsPerFoot - Scale factor for conversion
+ * @requires window.STATE.gridSize - Grid spacing in feet
+ * @requires window.CONFIG.roomSettings.pixelsPerFoot - Scale factor for conversion
  *
  * @example
  * // Draw a grid with current settings
@@ -320,11 +320,11 @@ export function drawCart(cart, isSelected) {
  * @function drawOverviewCanvas
  * @requires canvas - Canvas DOM element
  * @requires ctx - 2D rendering context
- * @requires CONFIG.carts - Array of cart objects
- * @requires CONFIG.scenarios - Array of scenario objects
- * @requires CONFIG.drawers - Array of drawer objects
- * @requires CONFIG.items - Array of item objects
- * @requires CONFIG.achievements - Array of achievement objects
+ * @requires window.CONFIG.carts - Array of cart objects
+ * @requires window.CONFIG.scenarios - Array of scenario objects
+ * @requires window.CONFIG.drawers - Array of drawer objects
+ * @requires window.CONFIG.items - Array of item objects
+ * @requires window.CONFIG.achievements - Array of achievement objects
  *
  * @example
  * // Render the overview statistics view

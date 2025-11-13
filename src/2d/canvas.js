@@ -88,8 +88,8 @@ export function initCanvas() {
  * @requires handleCanvasMouseDown - Mouse down event handler (from interaction.js)
  * @requires handleCanvasMouseMove - Mouse move event handler (from interaction.js)
  * @requires handleCanvasMouseUp - Mouse up event handler (from interaction.js)
- * @requires CONFIG.roomSettings - Room dimensions and scale settings
- * @requires STATE.mousePos - Global state object for mouse position
+ * @requires window.CONFIG.roomSettings - Room dimensions and scale settings
+ * @requires window.STATE.mousePos - Global state object for mouse position
  *
  * @example
  * // Set up canvas after initialization
@@ -137,13 +137,13 @@ export function setupCanvas() {
         // - normX/normY of 0.5 is the center (0,0) in feet
         // - normX/normY of 0 is the left/top edge
         // - normX/normY of 1 is the right/bottom edge
-        const xFeet = ((normX - 0.5) * window.CONFIG.roomSettings.width).toFixed(1);
-        const yFeet = ((normY - 0.5) * window.CONFIG.roomSettings.depth).toFixed(1);
+        const xFeet = ((normX - 0.5) * window.window.CONFIG.roomSettings.width).toFixed(1);
+        const yFeet = ((normY - 0.5) * window.window.CONFIG.roomSettings.depth).toFixed(1);
 
         // Update global state for other modules to access
-        if (window.STATE && window.STATE.mousePos) {
-            window.STATE.mousePos.x = xFeet;
-            window.STATE.mousePos.y = yFeet;
+        if (window.STATE && window.window.STATE.mousePos) {
+            window.window.STATE.mousePos.x = xFeet;
+            window.window.STATE.mousePos.y = yFeet;
         }
 
         // Update UI display element

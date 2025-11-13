@@ -38,8 +38,8 @@
  *
  * @function handleCanvasMouseDown
  * @param {MouseEvent} e - Mouse event object
- * @requires STATE.canvasMode - Current canvas mode
- * @requires CONFIG.carts - Array of cart objects
+ * @requires window.STATE.canvasMode - Current canvas mode
+ * @requires window.CONFIG.carts - Array of cart objects
  * @requires CART_TYPES - Cart dimension definitions
  * @requires selectEntity - Function to select a cart (from teacher.js)
  * @requires deselectEntity - Function to deselect current selection (from teacher.js)
@@ -87,7 +87,7 @@ export function handleCanvasMouseDown(e) {
         ) {
             // Cart was clicked - start dragging
             if (window.STATE) {
-                window.STATE.draggedCart = cart;
+                window.window.STATE.draggedCart = cart;
             }
 
             // Select this cart
@@ -118,8 +118,8 @@ export function handleCanvasMouseDown(e) {
  * - Updates inspector panel with new coordinates
  *
  * Grid Snapping:
- * - If STATE.snapToGrid is true, position snaps to grid
- * - Grid size is defined by STATE.gridSize (in feet)
+ * - If window.STATE.snapToGrid is true, position snaps to grid
+ * - Grid size is defined by window.STATE.gridSize (in feet)
  * - Snapping is applied in normalized coordinate space
  *
  * Boundary Constraints:
@@ -129,10 +129,10 @@ export function handleCanvasMouseDown(e) {
  *
  * @function handleCanvasMouseMove
  * @param {MouseEvent} e - Mouse event object
- * @requires STATE.draggedCart - Currently dragged cart object (null if not dragging)
- * @requires STATE.snapToGrid - Whether grid snapping is enabled
- * @requires STATE.gridSize - Grid spacing in feet
- * @requires CONFIG.roomSettings.pixelsPerFoot - Scale factor
+ * @requires window.STATE.draggedCart - Currently dragged cart object (null if not dragging)
+ * @requires window.STATE.snapToGrid - Whether grid snapping is enabled
+ * @requires window.STATE.gridSize - Grid spacing in feet
+ * @requires window.CONFIG.roomSettings.pixelsPerFoot - Scale factor
  * @requires drawCanvas - Function to redraw canvas (from drawing.js)
  * @requires updateInspector - Function to update inspector panel (from teacher.js)
  *
@@ -159,7 +159,7 @@ export function handleCanvasMouseMove(e) {
 
     // Apply grid snapping if enabled
     if (window.STATE?.snapToGrid) {
-        const gridSize = window.STATE.gridSize || 1;
+        const gridSize = window.window.STATE.gridSize || 1;
         const pixelsPerFoot = window.CONFIG?.roomSettings?.pixelsPerFoot || 10;
 
         // Calculate grid size in normalized coordinates
@@ -178,7 +178,7 @@ export function handleCanvasMouseMove(e) {
 
     // Mark as having unsaved changes
     if (window.STATE) {
-        window.STATE.unsavedChanges = true;
+        window.window.STATE.unsavedChanges = true;
     }
 
     // Redraw canvas to show new position
@@ -207,7 +207,7 @@ export function handleCanvasMouseMove(e) {
  * so this function only needs to clear the drag state.
  *
  * @function handleCanvasMouseUp
- * @requires STATE.draggedCart - Currently dragged cart object
+ * @requires window.STATE.draggedCart - Currently dragged cart object
  *
  * @example
  * // Attach to canvas element
@@ -220,7 +220,7 @@ export function handleCanvasMouseMove(e) {
 export function handleCanvasMouseUp() {
     // Clear drag state
     if (window.STATE) {
-        window.STATE.draggedCart = null;
+        window.window.STATE.draggedCart = null;
     }
 }
 

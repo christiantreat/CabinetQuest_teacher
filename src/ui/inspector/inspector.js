@@ -64,12 +64,12 @@ import { buildAchievementInspector } from './achievementInspector.js';
 export function getEntity(type, id) {
     // Map entity types to their corresponding CONFIG collections
     const collections = {
-        'cart': CONFIG.carts,
-        'cameraview': CONFIG.cameraViews,
-        'scenario': CONFIG.scenarios,
-        'drawer': CONFIG.drawers,
-        'item': CONFIG.items,
-        'achievement': CONFIG.achievements
+        'cart': window.CONFIG.carts,
+        'cameraview': window.CONFIG.cameraViews,
+        'scenario': window.CONFIG.scenarios,
+        'drawer': window.CONFIG.drawers,
+        'item': window.CONFIG.items,
+        'achievement': window.CONFIG.achievements
     };
 
     // Find and return the entity from the appropriate collection
@@ -85,7 +85,7 @@ export function getEntity(type, id) {
  * 3. Routes to the appropriate inspector panel builder
  * 4. Displays an empty state if nothing is selected
  *
- * The function reads from STATE.selectedType and STATE.selectedId to determine
+ * The function reads from window.STATE.selectedType and window.STATE.selectedId to determine
  * what to display. It updates the #inspector-content DOM element with the
  * appropriate property panel HTML.
  *
@@ -94,20 +94,20 @@ export function getEntity(type, id) {
  *
  * @example
  * // Called when user selects a cart in the hierarchy
- * STATE.selectedType = 'cart';
- * STATE.selectedId = 'cart-001';
+ * window.STATE.selectedType = 'cart';
+ * window.STATE.selectedId = 'cart-001';
  * updateInspector(); // Displays cart property panel
  *
  * @example
  * // Called when user deselects all entities
- * STATE.selectedType = null;
- * STATE.selectedId = null;
+ * window.STATE.selectedType = null;
+ * window.STATE.selectedId = null;
  * updateInspector(); // Displays "Select an item..." message
  *
  * @example
  * // Routing to different inspector types
- * STATE.selectedType = 'item';
- * STATE.selectedId = 'item-123';
+ * window.STATE.selectedType = 'item';
+ * window.STATE.selectedId = 'item-123';
  * updateInspector(); // Displays item property panel with image upload
  *
  * @see {@link module:ui/inspector/cartInspector~buildCartInspector}
@@ -119,13 +119,13 @@ export function updateInspector() {
     const container = document.getElementById('inspector-content');
 
     // Handle case where no entity is selected - show empty state
-    if (!STATE.selectedType || !STATE.selectedId) {
+    if (!window.STATE.selectedType || !window.STATE.selectedId) {
         container.innerHTML = '<div class="inspector-empty">Select an item from the hierarchy<br>to view its properties</div>';
         return;
     }
 
     // Retrieve the selected entity from the appropriate collection
-    const entity = getEntity(STATE.selectedType, STATE.selectedId);
+    const entity = getEntity(window.STATE.selectedType, window.STATE.selectedId);
 
     // Handle case where entity was deleted or not found
     if (!entity) {
@@ -134,7 +134,7 @@ export function updateInspector() {
     }
 
     // Route to the appropriate inspector builder based on entity type
-    switch (STATE.selectedType) {
+    switch (window.STATE.selectedType) {
         case 'cart':
             buildCartInspector(entity, container);
             break;

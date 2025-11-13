@@ -35,7 +35,7 @@ export const CanvasMode = {
  *
  * Switches between room layout mode and overview statistics mode.
  * This function:
- * - Updates the global STATE.canvasMode
+ * - Updates the global window.STATE.canvasMode
  * - Updates button active states in the UI
  * - Updates the mode info display
  * - Triggers a canvas redraw with the new mode
@@ -54,7 +54,7 @@ export const CanvasMode = {
  *
  * @function setCanvasMode
  * @param {string} mode - The mode to switch to ('room' or 'overview')
- * @requires STATE.canvasMode - Global state property for current mode
+ * @requires window.STATE.canvasMode - Global state property for current mode
  * @requires drawCanvas - Function to redraw canvas (from drawing.js)
  *
  * @example
@@ -82,7 +82,7 @@ export function setCanvasMode(mode) {
 
     // Update global state
     if (window.STATE) {
-        window.STATE.canvasMode = mode;
+        window.window.STATE.canvasMode = mode;
     }
 
     // Update button active states

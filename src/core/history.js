@@ -24,7 +24,7 @@
 // - buildAll3DCarts() - Rebuilds the 3D scene after cart/drawer changes
 // These dependencies will be injected when integrating into the modular system.
 
-import { CONFIG, STATE } from '../config/config.js';
+
 
 // ===== UNDO/REDO SYSTEM =====
 
@@ -98,7 +98,7 @@ export function recordAction(actionType, data) {
     HISTORY.redoStack = [];
 
     updateUndoRedoButtons();
-    STATE.unsavedChanges = true;
+    window.STATE.unsavedChanges = true;
 }
 
 /**
@@ -152,7 +152,7 @@ export function undo() {
 
     HISTORY.isPerformingAction = false;
     updateUndoRedoButtons();
-    STATE.unsavedChanges = true;
+    window.STATE.unsavedChanges = true;
 }
 
 /**
@@ -176,7 +176,7 @@ export function redo() {
 
     HISTORY.isPerformingAction = false;
     updateUndoRedoButtons();
-    STATE.unsavedChanges = true;
+    window.STATE.unsavedChanges = true;
 }
 
 /**
@@ -192,18 +192,18 @@ export function redo() {
 export function applyAction(action) {
     switch (action.type) {
         case 'CREATE_CART':
-            CONFIG.carts.push(action.data.cart);
+            window.CONFIG.carts.push(action.data.cart);
             buildHierarchy();
             drawCanvas();
             buildAll3DCarts();
             break;
 
         case 'DELETE_CART':
-            const cartIndex = CONFIG.carts.findIndex(c => c.id === action.data.cartId);
+            const cartIndex = window.CONFIG.carts.findIndex(c => c.id === action.data.cartId);
             if (cartIndex !== -1) {
-                CONFIG.carts.splice(cartIndex, 1);
+                window.CONFIG.carts.splice(cartIndex, 1);
                 // Also delete related drawers
-                CONFIG.drawers = CONFIG.drawers.filter(d => d.cart !== action.data.cartId);
+                window.CONFIG.drawers = window.CONFIG.drawers.filter(d => d.cart !== action.data.cartId);
                 buildHierarchy();
                 drawCanvas();
                 buildAll3DCarts();
@@ -211,7 +211,7 @@ export function applyAction(action) {
             break;
 
         case 'MOVE_CART':
-            const movedCart = CONFIG.carts.find(c => c.id === action.data.cartId);
+            const movedCart = window.CONFIG.carts.find(c => c.id === action.data.cartId);
             if (movedCart) {
                 movedCart.x = action.data.newPosition.x;
                 movedCart.y = action.data.newPosition.y;
@@ -224,7 +224,7 @@ export function applyAction(action) {
             break;
 
         case 'UPDATE_CART_PROPERTY':
-            const updatedCart = CONFIG.carts.find(c => c.id === action.data.cartId);
+            const updatedCart = window.CONFIG.carts.find(c => c.id === action.data.cartId);
             if (updatedCart) {
                 updatedCart[action.data.property] = action.data.newValue;
                 buildHierarchy();
@@ -234,35 +234,35 @@ export function applyAction(action) {
             break;
 
         case 'CREATE_DRAWER':
-            CONFIG.drawers.push(action.data.drawer);
+            window.CONFIG.drawers.push(action.data.drawer);
             buildHierarchy();
             buildAll3DCarts();
             break;
 
         case 'DELETE_DRAWER':
-            const drawerIndex = CONFIG.drawers.findIndex(d => d.id === action.data.drawerId);
+            const drawerIndex = window.CONFIG.drawers.findIndex(d => d.id === action.data.drawerId);
             if (drawerIndex !== -1) {
-                CONFIG.drawers.splice(drawerIndex, 1);
+                window.CONFIG.drawers.splice(drawerIndex, 1);
                 buildHierarchy();
                 buildAll3DCarts();
             }
             break;
 
         case 'CREATE_ITEM':
-            CONFIG.items.push(action.data.item);
+            window.CONFIG.items.push(action.data.item);
             buildHierarchy();
             break;
 
         case 'DELETE_ITEM':
-            const itemIndex = CONFIG.items.findIndex(i => i.id === action.data.itemId);
+            const itemIndex = window.CONFIG.items.findIndex(i => i.id === action.data.itemId);
             if (itemIndex !== -1) {
-                CONFIG.items.splice(itemIndex, 1);
+                window.CONFIG.items.splice(itemIndex, 1);
                 buildHierarchy();
             }
             break;
 
         case 'UPDATE_DRAWER_PROPERTY':
-            const updatedDrawer = CONFIG.drawers.find(d => d.id === action.data.drawerId);
+            const updatedDrawer = window.CONFIG.drawers.find(d => d.id === action.data.drawerId);
             if (updatedDrawer) {
                 updatedDrawer[action.data.property] = action.data.newValue;
                 buildHierarchy();
@@ -270,7 +270,7 @@ export function applyAction(action) {
             break;
 
         case 'UPDATE_ITEM_PROPERTY':
-            const updatedItem = CONFIG.items.find(i => i.id === action.data.itemId);
+            const updatedItem = window.CONFIG.items.find(i => i.id === action.data.itemId);
             if (updatedItem) {
                 updatedItem[action.data.property] = action.data.newValue;
                 buildHierarchy();
@@ -278,7 +278,7 @@ export function applyAction(action) {
             break;
 
         case 'UPDATE_SCENARIO_PROPERTY':
-            const updatedScenario = CONFIG.scenarios.find(s => s.id === action.data.scenarioId);
+            const updatedScenario = window.CONFIG.scenarios.find(s => s.id === action.data.scenarioId);
             if (updatedScenario) {
                 updatedScenario[action.data.property] = action.data.newValue;
                 buildHierarchy();
@@ -286,7 +286,7 @@ export function applyAction(action) {
             break;
 
         case 'UPDATE_ACHIEVEMENT_PROPERTY':
-            const updatedAchievement = CONFIG.achievements.find(a => a.id === action.data.achievementId);
+            const updatedAchievement = window.CONFIG.achievements.find(a => a.id === action.data.achievementId);
             if (updatedAchievement) {
                 updatedAchievement[action.data.property] = action.data.newValue;
                 buildHierarchy();
@@ -294,7 +294,7 @@ export function applyAction(action) {
             break;
 
         case 'UPDATE_CAMERAVIEW_PROPERTY':
-            const updatedView = CONFIG.cameraViews.find(v => v.id === action.data.viewId);
+            const updatedView = window.CONFIG.cameraViews.find(v => v.id === action.data.viewId);
             if (updatedView) {
                 updatedView[action.data.property] = action.data.newValue;
                 buildHierarchy();
@@ -317,11 +317,11 @@ export function applyReverseAction(action) {
     switch (action.type) {
         case 'CREATE_CART':
             // Reverse of create is delete
-            const cartIndex = CONFIG.carts.findIndex(c => c.id === action.data.cart.id);
+            const cartIndex = window.CONFIG.carts.findIndex(c => c.id === action.data.cart.id);
             if (cartIndex !== -1) {
-                CONFIG.carts.splice(cartIndex, 1);
+                window.CONFIG.carts.splice(cartIndex, 1);
                 // Also delete related drawers
-                CONFIG.drawers = CONFIG.drawers.filter(d => d.cart !== action.data.cart.id);
+                window.CONFIG.drawers = window.CONFIG.drawers.filter(d => d.cart !== action.data.cart.id);
                 buildHierarchy();
                 drawCanvas();
                 buildAll3DCarts();
@@ -330,10 +330,10 @@ export function applyReverseAction(action) {
 
         case 'DELETE_CART':
             // Reverse of delete is create - restore the cart and its drawers
-            CONFIG.carts.push(action.data.cart);
+            window.CONFIG.carts.push(action.data.cart);
             // Restore drawers
             if (action.data.drawers) {
-                CONFIG.drawers.push(...action.data.drawers);
+                window.CONFIG.drawers.push(...action.data.drawers);
             }
             buildHierarchy();
             drawCanvas();
@@ -342,7 +342,7 @@ export function applyReverseAction(action) {
 
         case 'MOVE_CART':
             // Restore the old position
-            const movedCart = CONFIG.carts.find(c => c.id === action.data.cartId);
+            const movedCart = window.CONFIG.carts.find(c => c.id === action.data.cartId);
             if (movedCart) {
                 movedCart.x = action.data.oldPosition.x;
                 movedCart.y = action.data.oldPosition.y;
@@ -356,7 +356,7 @@ export function applyReverseAction(action) {
 
         case 'UPDATE_CART_PROPERTY':
             // Restore the old property value
-            const updatedCart = CONFIG.carts.find(c => c.id === action.data.cartId);
+            const updatedCart = window.CONFIG.carts.find(c => c.id === action.data.cartId);
             if (updatedCart) {
                 updatedCart[action.data.property] = action.data.oldValue;
                 buildHierarchy();
@@ -367,9 +367,9 @@ export function applyReverseAction(action) {
 
         case 'CREATE_DRAWER':
             // Reverse of create is delete
-            const drawerIndex = CONFIG.drawers.findIndex(d => d.id === action.data.drawer.id);
+            const drawerIndex = window.CONFIG.drawers.findIndex(d => d.id === action.data.drawer.id);
             if (drawerIndex !== -1) {
-                CONFIG.drawers.splice(drawerIndex, 1);
+                window.CONFIG.drawers.splice(drawerIndex, 1);
                 buildHierarchy();
                 drawCanvas();
                 buildAll3DCarts();
@@ -378,7 +378,7 @@ export function applyReverseAction(action) {
 
         case 'DELETE_DRAWER':
             // Reverse of delete is create - restore the drawer
-            CONFIG.drawers.push(action.data.drawer);
+            window.CONFIG.drawers.push(action.data.drawer);
             buildHierarchy();
             drawCanvas();
             buildAll3DCarts();
@@ -386,9 +386,9 @@ export function applyReverseAction(action) {
 
         case 'CREATE_ITEM':
             // Reverse of create is delete
-            const itemIndex = CONFIG.items.findIndex(i => i.id === action.data.item.id);
+            const itemIndex = window.CONFIG.items.findIndex(i => i.id === action.data.item.id);
             if (itemIndex !== -1) {
-                CONFIG.items.splice(itemIndex, 1);
+                window.CONFIG.items.splice(itemIndex, 1);
                 buildHierarchy();
                 drawCanvas();
                 buildAll3DCarts();
@@ -397,7 +397,7 @@ export function applyReverseAction(action) {
 
         case 'DELETE_ITEM':
             // Reverse of delete is create - restore the item
-            CONFIG.items.push(action.data.item);
+            window.CONFIG.items.push(action.data.item);
             buildHierarchy();
             drawCanvas();
             buildAll3DCarts();
@@ -405,7 +405,7 @@ export function applyReverseAction(action) {
 
         case 'UPDATE_DRAWER_PROPERTY':
             // Restore the old property value
-            const updatedDrawer = CONFIG.drawers.find(d => d.id === action.data.drawerId);
+            const updatedDrawer = window.CONFIG.drawers.find(d => d.id === action.data.drawerId);
             if (updatedDrawer) {
                 updatedDrawer[action.data.property] = action.data.oldValue;
                 buildHierarchy();
@@ -416,7 +416,7 @@ export function applyReverseAction(action) {
 
         case 'UPDATE_ITEM_PROPERTY':
             // Restore the old property value
-            const updatedItem = CONFIG.items.find(i => i.id === action.data.itemId);
+            const updatedItem = window.CONFIG.items.find(i => i.id === action.data.itemId);
             if (updatedItem) {
                 updatedItem[action.data.property] = action.data.oldValue;
                 buildHierarchy();
@@ -427,7 +427,7 @@ export function applyReverseAction(action) {
 
         case 'UPDATE_SCENARIO_PROPERTY':
             // Restore the old property value
-            const updatedScenario = CONFIG.scenarios.find(s => s.id === action.data.scenarioId);
+            const updatedScenario = window.CONFIG.scenarios.find(s => s.id === action.data.scenarioId);
             if (updatedScenario) {
                 updatedScenario[action.data.property] = action.data.oldValue;
                 buildHierarchy();
@@ -436,7 +436,7 @@ export function applyReverseAction(action) {
 
         case 'UPDATE_ACHIEVEMENT_PROPERTY':
             // Restore the old property value
-            const updatedAchievement = CONFIG.achievements.find(a => a.id === action.data.achievementId);
+            const updatedAchievement = window.CONFIG.achievements.find(a => a.id === action.data.achievementId);
             if (updatedAchievement) {
                 updatedAchievement[action.data.property] = action.data.oldValue;
                 buildHierarchy();
@@ -445,7 +445,7 @@ export function applyReverseAction(action) {
 
         case 'UPDATE_CAMERAVIEW_PROPERTY':
             // Restore the old property value
-            const updatedView = CONFIG.cameraViews.find(v => v.id === action.data.viewId);
+            const updatedView = window.CONFIG.cameraViews.find(v => v.id === action.data.viewId);
             if (updatedView) {
                 updatedView[action.data.property] = action.data.oldValue;
                 buildHierarchy();

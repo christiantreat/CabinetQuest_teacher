@@ -29,7 +29,7 @@
  * @module 3d/cartModel
  */
 
-import { CONFIG } from '../config/config.js';
+
 import {
     CART_TYPES,
     DRAWER_COLOR_MAP,
@@ -70,7 +70,7 @@ import { scene, cartMeshes } from './scene.js';
  */
 export function getDrawerColor(drawer) {
     // Check if drawer has any items
-    const drawerItems = CONFIG.items.filter(item => item.drawer === drawer.id);
+    const drawerItems = window.CONFIG.items.filter(item => item.drawer === drawer.id);
 
     if (drawerItems.length === 0) {
         return DEFAULT_DRAWER_COLOR; // Gray for empty drawers
@@ -385,7 +385,7 @@ export function create3DCart(cartData) {
     // ===== DRAWERS =====
 
     // Get drawers belonging to this cart
-    const cartDrawers = CONFIG.drawers.filter(d => d.cart === cartData.id);
+    const cartDrawers = window.CONFIG.drawers.filter(d => d.cart === cartData.id);
 
     if (cartDrawers.length > 0) {
         // Sort drawers by number (top to bottom)
@@ -413,8 +413,8 @@ export function create3DCart(cartData) {
     // ===== POSITIONING =====
 
     // Convert normalized 0-1 coords to feet-based 3D coords
-    const roomWidth = CONFIG.roomSettings.width;
-    const roomDepth = CONFIG.roomSettings.depth;
+    const roomWidth = window.CONFIG.roomSettings.width;
+    const roomDepth = window.CONFIG.roomSettings.depth;
 
     // Center the coordinate system (0.5, 0.5) = room center
     cartGroup.position.x = (cartData.x - 0.5) * roomWidth;
@@ -445,7 +445,7 @@ export function create3DCart(cartData) {
  * This function:
  * 1. Clears existing carts from scene and memory
  * 2. Properly disposes of all geometries and materials
- * 3. Creates new 3D cart models from CONFIG.carts
+ * 3. Creates new 3D cart models from window.CONFIG.carts
  * 4. Adds them to the scene
  * 5. Updates the cartMeshes map
  *
@@ -496,7 +496,7 @@ export function buildAll3DCarts() {
     cartMeshes.clear();
 
     // Create 3D version of each cart
-    CONFIG.carts.forEach(cart => {
+    window.CONFIG.carts.forEach(cart => {
         const cart3D = create3DCart(cart);
         scene.add(cart3D);
         cartMeshes.set(cart.id, cart3D);
