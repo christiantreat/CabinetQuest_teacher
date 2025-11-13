@@ -56,8 +56,8 @@ import {
  */
 export function createFloor() {
     // Get room dimensions from config (in feet)
-    const roomWidth = CONFIG.roomSettings.width;
-    const roomDepth = CONFIG.roomSettings.depth;
+    const roomWidth = window.CONFIG.roomSettings.width;
+    const roomDepth = window.CONFIG.roomSettings.depth;
 
     // Create floor geometry (large plane)
     const floorGeometry = new THREE.PlaneGeometry(roomWidth, roomDepth);
@@ -108,8 +108,8 @@ export function createFloor() {
  * @requires CONFIG.roomSettings.depth - Room depth in feet
  */
 export function createGrid() {
-    const roomWidth = CONFIG.roomSettings.width; // feet
-    const roomDepth = CONFIG.roomSettings.depth; // feet
+    const roomWidth = window.CONFIG.roomSettings.width; // feet
+    const roomDepth = window.CONFIG.roomSettings.depth; // feet
     const gridSize = 1; // 1 foot grid
 
     // Create grid helper (extends to largest dimension)
