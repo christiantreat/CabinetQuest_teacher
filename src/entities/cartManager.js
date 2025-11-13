@@ -12,19 +12,8 @@
  */
 
 // Import required globals and helper functions
-const CONFIG = window.CONFIG;
-const STATE = window.STATE;
-const CART_TYPES = window.CART_TYPES;
-const cartMeshes = () => window.cartMeshes;
-const getEntity = window.getEntity;
-const recordAction = window.recordAction;
-const buildHierarchy = window.buildHierarchy;
-const drawCanvas = window.drawCanvas;
-const buildAll3DCarts = window.buildAll3DCarts;
-const updateInspector = window.updateInspector;
-const selectEntity = window.selectEntity;
-const showAlert = window.showAlert;
-const updateStatusBar = window.updateStatusBar;
+// Note: These are accessed via window to avoid undefined values during module load
+// when window properties haven't been set yet
 
 // ========================================
 // CART PROPERTY UPDATES
@@ -63,41 +52,41 @@ const updateStatusBar = window.updateStatusBar;
  * updateCartProperty('rotation', 90);
  */
 export function updateCartProperty(prop, value) {
-    const cart = getEntity('cart', STATE.selectedId);
+    const cart = window.getEntity('cart', window.STATE.selectedId);
     if (cart) {
         const oldValue = cart[prop];
         cart[prop] = value;
-        STATE.unsavedChanges = true;
+        window.STATE.unsavedChanges = true;
 
         // Record action for undo/redo
-        recordAction('UPDATE_CART_PROPERTY', {
+        window.recordAction('UPDATE_CART_PROPERTY', {
             cartId: cart.id,
             property: prop,
             oldValue: oldValue,
             newValue: value
         });
 
-        buildHierarchy();
-        drawCanvas();
+        window.buildHierarchy();
+        window.drawCanvas();
 
         // If type, color, or name changed, rebuild 3D cart
         if (prop === 'type' || prop === 'color' || prop === 'name') {
             // If type changed, update color to match type default
-            if (prop === 'type' && value && CART_TYPES[value]) {
-                cart.color = CART_TYPES[value].color;
-                cart.name = CART_TYPES[value].name;
+            if (prop === 'type' && value && window.CART_TYPES[value]) {
+                cart.color = window.CART_TYPES[value].color;
+                cart.name = window.CART_TYPES[value].name;
             }
-            buildAll3DCarts();
-            updateInspector(); // Refresh inspector to show updated values
+            window.buildAll3DCarts();
+            window.updateInspector(); // Refresh inspector to show updated values
         }
 
         // If position changed from inspector, update 3D position
         if (prop === 'x' || prop === 'y') {
-            const meshes = cartMeshes();
+            const meshes = window.cartMeshes;
             const cart3D = meshes.get ? meshes.get(cart.id) : meshes[cart.id];
             if (cart3D) {
-                const roomWidth = CONFIG.roomSettings.width;
-                const roomDepth = CONFIG.roomSettings.depth;
+                const roomWidth = window.CONFIG.roomSettings.width;
+                const roomDepth = window.CONFIG.roomSettings.depth;
                 cart3D.position.x = (cart.x - 0.5) * roomWidth;
                 cart3D.position.z = (cart.y - 0.5) * roomDepth;
             }
@@ -105,12 +94,12 @@ export function updateCartProperty(prop, value) {
 
         // If rotation changed, update 3D rotation
         if (prop === 'rotation') {
-            const meshes = cartMeshes();
+            const meshes = window.cartMeshes;
             const cart3D = meshes.get ? meshes.get(cart.id) : meshes[cart.id];
             if (cart3D) {
                 cart3D.rotation.y = (value * Math.PI) / 180; // Convert degrees to radians
             }
-            updateInspector(); // Refresh to show new value
+            window.updateInspector(); // Refresh to show new value
         }
     }
 }
@@ -141,10 +130,10 @@ export function updateCartProperty(prop, value) {
  * updateCartPositionFeet('y', -3);
  */
 export function updateCartPositionFeet(axis, valueFeet) {
-    const cart = getEntity('cart', STATE.selectedId);
+    const cart = window.getEntity('cart', window.STATE.selectedId);
     if (cart) {
-        const roomWidth = CONFIG.roomSettings.width;
-        const roomDepth = CONFIG.roomSettings.depth;
+        const roomWidth = window.CONFIG.roomSettings.width;
+        const roomDepth = window.CONFIG.roomSettings.depth;
 
         // Convert feet-based position (from center) to normalized 0-1 coordinates
         let normalizedValue;
@@ -207,16 +196,16 @@ export function createNewCart() {
         isInventory: false
     };
 
-    CONFIG.carts.push(newCart);
+    window.CONFIG.carts.push(newCart);
 
     // Record for undo/redo
-    recordAction('CREATE_CART', { cart: newCart });
+    window.recordAction('CREATE_CART', { cart: newCart });
 
-    STATE.unsavedChanges = true;
-    buildHierarchy();
-    updateStatusBar();
-    selectEntity('cart', id);
-    drawCanvas();
-    buildAll3DCarts(); // Rebuild 3D scene
-    showAlert('New cart created', 'success');
+    window.STATE.unsavedChanges = true;
+    window.buildHierarchy();
+    window.updateStatusBar();
+    window.selectEntity('cart', id);
+    window.drawCanvas();
+    window.buildAll3DCarts(); // Rebuild 3D scene
+    window.showAlert('New cart created', 'success');
 }

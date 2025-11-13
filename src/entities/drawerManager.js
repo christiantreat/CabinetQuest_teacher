@@ -11,16 +11,17 @@
  */
 
 // Import required globals and helper functions
-const CONFIG = window.CONFIG;
-const STATE = window.STATE;
-const getEntity = window.getEntity;
-const recordAction = window.recordAction;
-const buildHierarchy = window.buildHierarchy;
+// Note: These are accessed via window to avoid undefined values during module load
+// when window properties haven not been set yet
+
+
+
+
 const drawCanvas = window.drawCanvas;
 const buildAll3DCarts = window.buildAll3DCarts;
-const selectEntity = window.selectEntity;
-const showAlert = window.showAlert;
-const updateStatusBar = window.updateStatusBar;
+
+
+
 
 // ========================================
 // DRAWER PROPERTY UPDATES
@@ -58,21 +59,21 @@ const updateStatusBar = window.updateStatusBar;
  * updateDrawerProperty('number', 2);
  */
 export function updateDrawerProperty(prop, value) {
-    const drawer = getEntity('drawer', STATE.selectedId);
+    const drawer = window.getEntity('drawer', window.STATE.selectedId);
     if (drawer) {
         const oldValue = drawer[prop];
         drawer[prop] = value;
-        STATE.unsavedChanges = true;
+        window.STATE.unsavedChanges = true;
 
         // Record action for undo/redo
-        recordAction('UPDATE_DRAWER_PROPERTY', {
+        window.recordAction('UPDATE_DRAWER_PROPERTY', {
             drawerId: drawer.id,
             property: prop,
             oldValue: oldValue,
             newValue: value
         });
 
-        buildHierarchy();
+        window.buildHierarchy();
         drawCanvas(); // Update 2D room layout view
 
         // If cart, number, or name changed, rebuild 3D carts to show updated drawer
@@ -97,7 +98,7 @@ export function updateDrawerProperty(prop, value) {
  *
  * The function:
  * 1. Creates the drawer object
- * 2. Adds it to CONFIG.drawers
+ * 2. Adds it to window.CONFIG.drawers
  * 3. Records the action for undo/redo
  * 4. Updates all UI elements
  * 5. Selects the new drawer
@@ -120,16 +121,16 @@ export function createNewDrawer() {
         number: 1
     };
 
-    CONFIG.drawers.push(newDrawer);
+    window.CONFIG.drawers.push(newDrawer);
 
     // Record for undo/redo
-    recordAction('CREATE_DRAWER', { drawer: newDrawer });
+    window.recordAction('CREATE_DRAWER', { drawer: newDrawer });
 
-    STATE.unsavedChanges = true;
-    buildHierarchy();
-    updateStatusBar();
-    selectEntity('drawer', id);
+    window.STATE.unsavedChanges = true;
+    window.buildHierarchy();
+    window.updateStatusBar();
+    window.selectEntity('drawer', id);
     drawCanvas(); // Update 2D room layout view
     buildAll3DCarts(); // Rebuild 3D scene to show new drawer
-    showAlert('New drawer created', 'success');
+    window.showAlert('New drawer created', 'success');
 }

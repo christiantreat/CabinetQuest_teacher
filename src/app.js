@@ -860,6 +860,7 @@ if (typeof window !== 'undefined') {
 
     // Expose selection and inspector functions
     window.selectEntity = selectEntity;
+    window.deselectEntity = deselectEntity;
     window.updateInspector = updateInspector;
 
     // Setup window.onload handler

@@ -12,17 +12,18 @@
  */
 
 // Import required globals and helper functions
-const CONFIG = window.CONFIG;
-const STATE = window.STATE;
-const camera = () => window.camera;
-const controls = () => window.controls;
-const getEntity = window.getEntity;
-const recordAction = window.recordAction;
-const buildHierarchy = window.buildHierarchy;
-const updateInspector = window.updateInspector;
-const selectEntity = window.selectEntity;
-const showAlert = window.showAlert;
-const updateStatusBar = window.updateStatusBar;
+// Note: These are accessed via window to avoid undefined values during module load
+// when window properties haven not been set yet
+
+
+
+
+
+
+
+
+
+
 
 // ========================================
 // CAMERA VIEW PROPERTY UPDATES
@@ -64,22 +65,22 @@ const updateStatusBar = window.updateStatusBar;
  * updateCameraViewProperty('type', 'overview');
  */
 export function updateCameraViewProperty(prop, value) {
-    const view = getEntity('cameraview', STATE.selectedId);
+    const view = window.getEntity('cameraview', window.STATE.selectedId);
     if (view) {
         const oldValue = view[prop];
         view[prop] = value;
-        STATE.unsavedChanges = true;
+        window.STATE.unsavedChanges = true;
 
         // Record action for undo/redo
-        recordAction('UPDATE_CAMERAVIEW_PROPERTY', {
+        window.recordAction('UPDATE_CAMERAVIEW_PROPERTY', {
             viewId: view.id,
             property: prop,
             oldValue: oldValue,
             newValue: value
         });
 
-        buildHierarchy();
-        updateInspector(); // Refresh to show updated rotation/direction if needed
+        window.buildHierarchy();
+        window.updateInspector(); // Refresh to show updated rotation/direction if needed
     }
 }
 
@@ -107,11 +108,11 @@ export function updateCameraViewProperty(prop, value) {
  * updateCameraViewPosition('z', 15);
  */
 export function updateCameraViewPosition(axis, value) {
-    const view = getEntity('cameraview', STATE.selectedId);
+    const view = window.getEntity('cameraview', window.STATE.selectedId);
     if (view) {
         view.position[axis] = value;
-        STATE.unsavedChanges = true;
-        updateInspector(); // Refresh to show updated rotation/direction
+        window.STATE.unsavedChanges = true;
+        window.updateInspector(); // Refresh to show updated rotation/direction
     }
 }
 
@@ -137,11 +138,11 @@ export function updateCameraViewPosition(axis, value) {
  * updateCameraViewLookAt('y', 3);
  */
 export function updateCameraViewLookAt(axis, value) {
-    const view = getEntity('cameraview', STATE.selectedId);
+    const view = window.getEntity('cameraview', window.STATE.selectedId);
     if (view) {
         view.lookAt[axis] = value;
-        STATE.unsavedChanges = true;
-        updateInspector(); // Refresh to show updated rotation/direction
+        window.STATE.unsavedChanges = true;
+        window.updateInspector(); // Refresh to show updated rotation/direction
     }
 }
 
@@ -267,7 +268,7 @@ export function calculateCameraRotationData(view) {
  * setCameraViewPreset('current');
  */
 export function setCameraViewPreset(preset) {
-    const view = getEntity('cameraview', STATE.selectedId);
+    const view = window.getEntity('cameraview', window.STATE.selectedId);
     if (!view) return;
 
     switch (preset) {
@@ -285,8 +286,8 @@ export function setCameraViewPreset(preset) {
             break;
         case 'current':
             // Use current 3D camera view
-            const cam = camera();
-            const ctrl = controls();
+            const cam = window.camera;
+            const ctrl = window.controls;
             if (cam) {
                 view.position = { x: cam.position.x, y: cam.position.y, z: cam.position.z };
                 view.lookAt = { x: ctrl.target.x, y: ctrl.target.y, z: ctrl.target.z };
@@ -295,9 +296,9 @@ export function setCameraViewPreset(preset) {
             break;
     }
 
-    STATE.unsavedChanges = true;
-    updateInspector();
-    showAlert(`Camera preset "${preset}" applied`, 'success');
+    window.STATE.unsavedChanges = true;
+    window.updateInspector();
+    window.showAlert(`Camera preset "${preset}" applied`, 'success');
 }
 
 // ========================================
@@ -319,7 +320,7 @@ export function setCameraViewPreset(preset) {
  *
  * The function:
  * 1. Creates the camera view object
- * 2. Adds it to CONFIG.cameraViews
+ * 2. Adds it to window.CONFIG.cameraViews
  * 3. Updates the unsaved changes flag
  * 4. Rebuilds the hierarchy UI
  * 5. Updates the status bar
@@ -346,10 +347,10 @@ export function createNewCameraView() {
         targetDrawer: null                // For drawer close-ups
     };
 
-    CONFIG.cameraViews.push(newCameraView);
-    STATE.unsavedChanges = true;
-    buildHierarchy();
-    updateStatusBar();
-    selectEntity('cameraview', id);
-    showAlert('New camera view created', 'success');
+    window.CONFIG.cameraViews.push(newCameraView);
+    window.STATE.unsavedChanges = true;
+    window.buildHierarchy();
+    window.updateStatusBar();
+    window.selectEntity('cameraview', id);
+    window.showAlert('New camera view created', 'success');
 }

@@ -10,14 +10,15 @@
  */
 
 // Import required globals and helper functions
-const CONFIG = window.CONFIG;
-const STATE = window.STATE;
-const getEntity = window.getEntity;
-const recordAction = window.recordAction;
-const buildHierarchy = window.buildHierarchy;
-const selectEntity = window.selectEntity;
-const showAlert = window.showAlert;
-const updateStatusBar = window.updateStatusBar;
+// Note: These are accessed via window to avoid undefined values during module load
+// when window properties haven not been set yet
+
+
+
+
+
+
+
 
 // ========================================
 // SCENARIO PROPERTY UPDATES
@@ -57,21 +58,21 @@ const updateStatusBar = window.updateStatusBar;
  * updateScenarioProperty('successFeedback', 'Excellent! You gathered all critical items.');
  */
 export function updateScenarioProperty(prop, value) {
-    const scenario = getEntity('scenario', STATE.selectedId);
+    const scenario = window.getEntity('scenario', window.STATE.selectedId);
     if (scenario) {
         const oldValue = scenario[prop];
         scenario[prop] = value;
-        STATE.unsavedChanges = true;
+        window.STATE.unsavedChanges = true;
 
         // Record action for undo/redo
-        recordAction('UPDATE_SCENARIO_PROPERTY', {
+        window.recordAction('UPDATE_SCENARIO_PROPERTY', {
             scenarioId: scenario.id,
             property: prop,
             oldValue: oldValue,
             newValue: value
         });
 
-        buildHierarchy();
+        window.buildHierarchy();
     }
 }
 
@@ -94,7 +95,7 @@ export function updateScenarioProperty(prop, value) {
  *
  * The function:
  * 1. Creates the scenario object
- * 2. Adds it to CONFIG.scenarios
+ * 2. Adds it to window.CONFIG.scenarios
  * 3. Updates the unsaved changes flag
  * 4. Rebuilds the hierarchy UI
  * 5. Updates the status bar
@@ -122,10 +123,10 @@ export function createNewScenario() {
         failureFeedback: 'Missing critical items.'
     };
 
-    CONFIG.scenarios.push(newScenario);
-    STATE.unsavedChanges = true;
-    buildHierarchy();
-    updateStatusBar();
-    selectEntity('scenario', id);
-    showAlert('New scenario created', 'success');
+    window.CONFIG.scenarios.push(newScenario);
+    window.STATE.unsavedChanges = true;
+    window.buildHierarchy();
+    window.updateStatusBar();
+    window.selectEntity('scenario', id);
+    window.showAlert('New scenario created', 'success');
 }
