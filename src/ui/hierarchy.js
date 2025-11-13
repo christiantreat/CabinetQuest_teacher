@@ -151,16 +151,27 @@ import { selectEntity } from '../core/state.js';
  * @see refreshHierarchy - User-triggered refresh with feedback
  */
 export function buildHierarchy() {
+    console.log('🔄 [Hierarchy] Building hierarchy tree...');
+
     // Step 1: Get the hierarchy tree container element
     const tree = document.getElementById('hierarchy-tree');
+    if (!tree) {
+        console.error('❌ [Hierarchy] ERROR: Could not find #hierarchy-tree element!');
+        return;
+    }
 
     // Step 2: Clear all existing content
     tree.innerHTML = '';
 
     // Step 3: Build the special Carts category with nested drawers
     // This must be first to maintain consistent ordering
-    const cartsCategory = createCartsWithDrawersNode();
-    tree.appendChild(cartsCategory);
+    try {
+        const cartsCategory = createCartsWithDrawersNode();
+        tree.appendChild(cartsCategory);
+        console.log('✓ [Hierarchy] Carts category built successfully');
+    } catch (error) {
+        console.error('❌ [Hierarchy] ERROR building carts category:', error);
+    }
 
     // Step 4: Build standard categories for other entity types
     // Note: Drawers are excluded here because they're nested under Carts
@@ -195,11 +206,30 @@ export function buildHierarchy() {
         }
     ];
 
+    // Log function availability
+    console.log('📋 [Hierarchy] Checking entity creation functions:');
+    console.log('  - createNewCameraView:', typeof window.createNewCameraView);
+    console.log('  - createNewScenario:', typeof window.createNewScenario);
+    console.log('  - createNewItem:', typeof window.createNewItem);
+    console.log('  - createNewAchievement:', typeof window.createNewAchievement);
+    console.log('  - createNewCart:', typeof window.createNewCart);
+    console.log('  - createNewDrawer:', typeof window.createNewDrawer);
+
     // Step 5: Create and append each category node
     categories.forEach(category => {
-        const categoryDiv = createCategoryNode(category);
-        tree.appendChild(categoryDiv);
+        try {
+            if (!category.createNew) {
+                console.warn(`⚠️ [Hierarchy] WARNING: No createNew function for ${category.name}`);
+            }
+            const categoryDiv = createCategoryNode(category);
+            tree.appendChild(categoryDiv);
+            console.log(`✓ [Hierarchy] ${category.name} category built (${category.items.length} items)`);
+        } catch (error) {
+            console.error(`❌ [Hierarchy] ERROR building ${category.name} category:`, error);
+        }
     });
+
+    console.log('✅ [Hierarchy] Hierarchy tree build complete');
 }
 
 /**
@@ -289,6 +319,12 @@ export function createCartsWithDrawersNode() {
     // Attach the create function if it exists (still in teacher.js)
     if (typeof window.createNewCart === 'function') {
         createBtn.onclick = window.createNewCart;
+    } else {
+        console.error('❌ [Hierarchy] ERROR: window.createNewCart is not available!', typeof window.createNewCart);
+        createBtn.onclick = () => {
+            console.error('❌ [Hierarchy] Cannot create cart - createNewCart function not found');
+            alert('Error: createNewCart function not available. Check console for details.');
+        };
     }
     itemsDiv.appendChild(createBtn);
 
@@ -355,6 +391,7 @@ export function createCartsWithDrawersNode() {
 
                 // Call the create function if it exists (still in teacher.js)
                 if (typeof window.createNewDrawer === 'function') {
+                    console.log(`🗄️ [Hierarchy] Creating new drawer for cart: ${cart.name} (${cart.id})`);
                     window.createNewDrawer();
 
                     // Auto-assign the new drawer to this cart
@@ -363,14 +400,20 @@ export function createCartsWithDrawersNode() {
                         const newDrawer = CONFIG.drawers[CONFIG.drawers.length - 1];
                         if (newDrawer && !newDrawer.cart) {
                             newDrawer.cart = cart.id;
+                            console.log(`✓ [Hierarchy] Auto-assigned drawer ${newDrawer.id} to cart ${cart.id}`);
                             buildHierarchy(); // Refresh to show the drawer under this cart
 
                             // Update inspector if available
                             if (typeof window.updateInspector === 'function') {
                                 window.updateInspector();
+                            } else {
+                                console.warn('⚠️ [Hierarchy] updateInspector not available');
                             }
                         }
                     }, 100);
+                } else {
+                    console.error('❌ [Hierarchy] ERROR: window.createNewDrawer is not available!');
+                    alert('Error: createNewDrawer function not available. Check console for details.');
                 }
             };
             drawersDiv.appendChild(createDrawerBtn);
@@ -523,6 +566,12 @@ export function createCategoryNode(category) {
     // Attach the create function if provided
     if (category.createNew) {
         createBtn.onclick = category.createNew;
+    } else {
+        console.warn(`⚠️ [Hierarchy] No createNew function for ${category.name}`);
+        createBtn.onclick = () => {
+            console.error(`❌ [Hierarchy] Cannot create ${category.name} - createNew function not available`);
+            alert(`Error: Cannot create ${category.name}. Function not available. Check console for details.`);
+        };
     }
     itemsDiv.appendChild(createBtn);
 

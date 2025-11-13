@@ -10,6 +10,19 @@
  *                    buildAll3DCarts, updateInspector, selectEntity, showAlert)
  */
 
+// Import required globals and helper functions
+const CONFIG = window.CONFIG;
+const STATE = window.STATE;
+const getEntity = window.getEntity;
+const recordAction = window.recordAction;
+const buildHierarchy = window.buildHierarchy;
+const drawCanvas = window.drawCanvas;
+const buildAll3DCarts = window.buildAll3DCarts;
+const updateInspector = window.updateInspector;
+const selectEntity = window.selectEntity;
+const showAlert = window.showAlert;
+const updateStatusBar = window.updateStatusBar;
+
 // ========================================
 // ITEM PROPERTY UPDATES
 // ========================================

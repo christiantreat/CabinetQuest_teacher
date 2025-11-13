@@ -11,6 +11,19 @@
  *                    selectEntity, showAlert)
  */
 
+// Import required globals and helper functions
+const CONFIG = window.CONFIG;
+const STATE = window.STATE;
+const camera = () => window.camera;
+const controls = () => window.controls;
+const getEntity = window.getEntity;
+const recordAction = window.recordAction;
+const buildHierarchy = window.buildHierarchy;
+const updateInspector = window.updateInspector;
+const selectEntity = window.selectEntity;
+const showAlert = window.showAlert;
+const updateStatusBar = window.updateStatusBar;
+
 // ========================================
 // CAMERA VIEW PROPERTY UPDATES
 // ========================================
@@ -272,10 +285,12 @@ export function setCameraViewPreset(preset) {
             break;
         case 'current':
             // Use current 3D camera view
-            if (camera) {
-                view.position = { x: camera.position.x, y: camera.position.y, z: camera.position.z };
-                view.lookAt = { x: controls.target.x, y: controls.target.y, z: controls.target.z };
-                view.fov = camera.fov;
+            const cam = camera();
+            const ctrl = controls();
+            if (cam) {
+                view.position = { x: cam.position.x, y: cam.position.y, z: cam.position.z };
+                view.lookAt = { x: ctrl.target.x, y: ctrl.target.y, z: ctrl.target.z };
+                view.fov = cam.fov;
             }
             break;
     }
